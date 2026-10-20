@@ -4,4 +4,30 @@ services:
     image: spider-sense
     ports:
       - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-spidersense}:${POSTGRES_PASSWORD:-spidersense}@db:5432/${POSTGRES_DB:-spidersense}
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-spidersense}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spidersense}
+      POSTGRES_DB: ${POSTGRES_DB:-spidersense}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      # Postgres 18+ images keep their data under /var/lib/postgresql/<version>.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:
