@@ -1,0 +1,39 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Spider Sense API",
+    "version": "0.1.0",
+    "description": "Documentation de l'API Spider Sense."
+  },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Vérifie que l'API répond",
+        "tags": ["Système"],
+        "responses": {
+          "200": {
+            "description": "L'API est opérationnelle",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Health" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "required": ["status", "timestamp"],
+        "properties": {
+          "status": { "type": "string", "example": "ok" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

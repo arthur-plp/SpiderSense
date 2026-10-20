@@ -11,7 +11,10 @@
   "dependencies": {
     "next": "16.4.2",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "swagger-ui": "^5.34.0",
+    "swagger-ui-dist": "^5.34.0",
+    "swagger-ui-react": "^5.34.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
