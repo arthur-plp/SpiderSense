@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   boolean,
   check,
+  customType,
   date,
   doublePrecision,
   index,
@@ -67,6 +68,12 @@ export const moderationStatus = pgEnum("moderation_status", [
 
 export const articleStatus = pgEnum("article_status", ["DRAFT", "PUBLISHED"]);
 
+// node-postgres returns a Buffer, PGlite a Uint8Array.
+const bytea = customType<{ data: Buffer; driverData: Uint8Array }>({
+  dataType: () => "bytea",
+  fromDriver: (value) => Buffer.from(value),
+});
+
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -122,6 +129,13 @@ export const heroProfiles = pgTable(
     // Also used as a login identifier.
     alias: varchar("alias", { length: 100 }).notNull(),
     bio: text("bio"),
+    powers: text("powers").array().notNull().default(sql`'{}'::text[]`),
+    // Last known position, used by citizens to find the nearest hero.
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
+    locationUpdatedAt: timestamp("location_updated_at", { withTimezone: true }),
+    // Off duty heroes are listed but shown as unavailable.
+    onDuty: boolean("on_duty").notNull().default(true),
     status: reviewStatus("status").notNull().default("PENDING"),
     reviewedBy: uuid("reviewed_by").references(() => users.id, {
       onDelete: "set null",
@@ -131,6 +145,16 @@ export const heroProfiles = pgTable(
   },
   (t) => [uniqueIndex("hero_profiles_alias_unique").on(sql`lower(${t.alias})`)],
 );
+
+// Kept in the database so uploads survive redeploys without file storage.
+export const userAvatars = pgTable("user_avatars", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  mimeType: varchar("mime_type", { length: 50 }).notNull(),
+  data: bytea("data").notNull(),
+  updatedAt: timestamps.updatedAt,
+});
 
 export const sessions = pgTable(
   "sessions",
@@ -433,6 +457,21 @@ export const articles = pgTable("articles", {
   publishedAt: timestamp("published_at", { withTimezone: true }),
   ...timestamps,
 });
+
+// Only filled when no SMTP server is configured: emails are then readable
+// from the in-app preview mailbox instead of being sent.
+export const mailOutbox = pgTable(
+  "mail_outbox",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    toEmail: varchar("to_email", { length: 255 }).notNull(),
+    subject: varchar("subject", { length: 255 }).notNull(),
+    html: text("html").notNull(),
+    text: text("text").notNull(),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [index("mail_outbox_created_at_idx").on(t.createdAt)],
+);
 
 // Lets moderators supervise what users do on the platform.
 export const activityLogs = pgTable(

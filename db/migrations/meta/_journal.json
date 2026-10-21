@@ -15,6 +15,13 @@
       "when": 1792498723160,
       "tag": "0001_seed_incident_types",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792571079699,
+      "tag": "0002_hero_presence_avatars_outbox",
+      "breakpoints": true
     }
   ]
 }
