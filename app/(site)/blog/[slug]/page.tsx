@@ -56,7 +56,7 @@ async function ArticleContent({ params }: Pick<PageProps<"/blog/[slug]">, "param
         {article.coverUrl && <ArticleCover coverUrl={article.coverUrl} className="mt-8 max-h-112 rounded-3xl" />}
         {/* contentHtml is sanitized server-side when the article is saved. */}
         <div className="prose-hero mt-8 text-base sm:text-lg" dangerouslySetInnerHTML={{ __html: article.contentHtml }} />
-        <footer className="mt-12 border-t border-white/10 pt-6 text-sm text-slate-400">Publié par l&apos;équipe Heros-SOS.</footer>
+        <footer className="mt-12 border-t border-white/10 pt-6 text-sm text-slate-400">Publié par l&apos;équipe Spider Sense.</footer>
       </article>
 
       {others.length > 0 && (

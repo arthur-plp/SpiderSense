@@ -18,7 +18,7 @@ type NominatimPlace = {
 };
 
 // Nominatim's usage policy asks for an identifying User-Agent and caching.
-const USER_AGENT = "Heros-SOS/1.0 (plateforme citoyens / super-heros)";
+const USER_AGENT = "SpiderSense/1.0 (plateforme citoyens / super-heros)";
 const cache = new Map<string, { at: number; value: unknown }>();
 const TTL_MS = 24 * 60 * 60 * 1000;
 

@@ -96,7 +96,7 @@ export async function seedDemoData(db: Database): Promise<void> {
       .insert(s.users)
       .values([
         {
-          email: "admin@heros-sos.test",
+          email: "admin@spider-sense.test",
           passwordHash,
           civility: "MR",
           firstName: "Nick",
@@ -113,7 +113,7 @@ export async function seedDemoData(db: Database): Promise<void> {
           createdAt: daysAgo(200),
         },
         {
-          email: "moderateur@heros-sos.test",
+          email: "moderateur@spider-sense.test",
           passwordHash,
           civility: "MRS",
           firstName: "Maria",
@@ -179,7 +179,7 @@ export async function seedDemoData(db: Database): Promise<void> {
           const home = place(hero.place);
           const createdAt = daysAgo(hero.status === "APPROVED" ? random.int(120, 180) : random.int(1, 6));
           return {
-            email: `${hero.key}@heros-sos.test`,
+            email: `${hero.key}@spider-sense.test`,
             passwordHash,
             civility: hero.civility,
             firstName: hero.firstName,
@@ -561,8 +561,8 @@ export async function seedDemoData(db: Database): Promise<void> {
     const subscriptions = await tx
       .insert(s.newsletterSubscriptions)
       .values([
-        { email: "citoyen@heros-sos.test", userId: camille, subscribedAt: daysAgo(60) },
-        { email: "lucas.bernard@heros-sos.test", userId: lucas, isEnabled: false, subscribedAt: daysAgo(50) },
+        { email: "citoyen@spider-sense.test", userId: camille, subscribedAt: daysAgo(60) },
+        { email: "lucas.bernard@spider-sense.test", userId: lucas, isEnabled: false, subscribedAt: daysAgo(50) },
         { email: "fan.de.marvel@exemple.test", subscribedAt: daysAgo(33) },
         { email: "jeanne.l@exemple.test", subscribedAt: daysAgo(21) },
         { email: "contact@quartier-bastille.test", subscribedAt: daysAgo(8) },

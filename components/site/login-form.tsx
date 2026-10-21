@@ -15,10 +15,10 @@ import { ResendActivationForm } from "./resend-activation-form";
 const DEMO_PASSWORD = "Demo1234!";
 
 const DEMO_ACCOUNTS: { role: string; email: string; alias?: string }[] = [
-  { role: "Citoyen", email: "citoyen@heros-sos.test" },
-  { role: "Super-héros", email: "spiderman@heros-sos.test", alias: "Spider-Man" },
-  { role: "Modérateur", email: "moderateur@heros-sos.test" },
-  { role: "Administrateur", email: "admin@heros-sos.test" },
+  { role: "Citoyen", email: "citoyen@spider-sense.test" },
+  { role: "Super-héros", email: "spiderman@spider-sense.test", alias: "Spider-Man" },
+  { role: "Modérateur", email: "moderateur@spider-sense.test" },
+  { role: "Administrateur", email: "admin@spider-sense.test" },
 ];
 
 /** Login (5.2): email, or alias for approved super-heroes. */

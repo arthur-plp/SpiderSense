@@ -109,7 +109,7 @@ function HomeHero() {
             <span className="bg-gradient-to-r from-sos via-rose-400 to-brand bg-clip-text text-transparent">Appuyez sur SOS.</span>
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
-            Heros-SOS met en relation les citoyens et les super-héros. Déclarez un incident en un geste depuis votre téléphone : les héros
+            Spider Sense met en relation les citoyens et les super-héros. Déclarez un incident en un geste depuis votre téléphone : les héros
             disponibles sont alertés, l&apos;un d&apos;eux intervient et vous suivez tout en direct.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">

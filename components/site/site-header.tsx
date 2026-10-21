@@ -11,7 +11,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/6 bg-ink-950/70 backdrop-blur-xl">
       <Container className="flex h-16 items-center gap-6">
-        <Link href="/" className="shrink-0 rounded-lg" aria-label="Heros-SOS, retour à l'accueil">
+        <Link href="/" className="shrink-0 rounded-lg" aria-label="Spider Sense, retour à l'accueil">
           <Logo />
         </Link>
         <nav aria-label="Navigation principale" className="hidden md:block">

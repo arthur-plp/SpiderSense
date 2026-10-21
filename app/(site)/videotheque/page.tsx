@@ -8,7 +8,7 @@ import { listLibrary } from "@/lib/server/services/movies";
 
 export const metadata: Metadata = {
   title: "Vidéothèque",
-  description: "Les films dans lesquels apparaissent les super-héros de Heros-SOS, avec leur fiche IMDb.",
+  description: "Les films dans lesquels apparaissent les super-héros de Spider Sense, avec leur fiche IMDb.",
 };
 
 export default function VideoLibraryPage() {

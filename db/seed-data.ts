@@ -291,15 +291,15 @@ export type DemoCitizen = {
 };
 
 export const CITIZENS: DemoCitizen[] = [
-  { key: "camille", email: "citoyen@heros-sos.test", civility: "MRS", firstName: "Camille", lastName: "Martin", birthDate: "1992-04-14", place: "République", verified: true, activated: true },
-  { key: "lucas", email: "lucas.bernard@heros-sos.test", civility: "MR", firstName: "Lucas", lastName: "Bernard", birthDate: "1988-09-02", place: "Bastille", verified: true, activated: true },
-  { key: "lea", email: "lea.dubois@heros-sos.test", civility: "MRS", firstName: "Léa", lastName: "Dubois", birthDate: "1995-01-23", place: "Montmartre", verified: true, activated: true },
-  { key: "hugo", email: "hugo.thomas@heros-sos.test", civility: "MR", firstName: "Hugo", lastName: "Thomas", birthDate: "1979-06-30", place: "Bercy", verified: true, activated: true },
-  { key: "chloe", email: "chloe.robert@heros-sos.test", civility: "MRS", firstName: "Chloé", lastName: "Robert", birthDate: "2000-12-05", place: "Belleville", verified: false, activated: true },
-  { key: "nathan", email: "nathan.richard@heros-sos.test", civility: "MR", firstName: "Nathan", lastName: "Richard", birthDate: "1985-03-17", place: "Opéra", verified: true, activated: true },
-  { key: "manon", email: "manon.petit@heros-sos.test", civility: "MRS", firstName: "Manon", lastName: "Petit", birthDate: "1998-07-21", place: "Saint-Germain", verified: false, activated: true },
-  { key: "ines", email: "ines.durand@heros-sos.test", civility: "MRS", firstName: "Inès", lastName: "Durand", birthDate: "2003-02-11", place: "Vincennes", verified: false, activated: false },
-  { key: "kevin", email: "kevin.moreau@heros-sos.test", civility: "MR", firstName: "Kévin", lastName: "Moreau", birthDate: "1990-10-09", place: "Châtelet", verified: false, activated: true, disabled: true },
+  { key: "camille", email: "citoyen@spider-sense.test", civility: "MRS", firstName: "Camille", lastName: "Martin", birthDate: "1992-04-14", place: "République", verified: true, activated: true },
+  { key: "lucas", email: "lucas.bernard@spider-sense.test", civility: "MR", firstName: "Lucas", lastName: "Bernard", birthDate: "1988-09-02", place: "Bastille", verified: true, activated: true },
+  { key: "lea", email: "lea.dubois@spider-sense.test", civility: "MRS", firstName: "Léa", lastName: "Dubois", birthDate: "1995-01-23", place: "Montmartre", verified: true, activated: true },
+  { key: "hugo", email: "hugo.thomas@spider-sense.test", civility: "MR", firstName: "Hugo", lastName: "Thomas", birthDate: "1979-06-30", place: "Bercy", verified: true, activated: true },
+  { key: "chloe", email: "chloe.robert@spider-sense.test", civility: "MRS", firstName: "Chloé", lastName: "Robert", birthDate: "2000-12-05", place: "Belleville", verified: false, activated: true },
+  { key: "nathan", email: "nathan.richard@spider-sense.test", civility: "MR", firstName: "Nathan", lastName: "Richard", birthDate: "1985-03-17", place: "Opéra", verified: true, activated: true },
+  { key: "manon", email: "manon.petit@spider-sense.test", civility: "MRS", firstName: "Manon", lastName: "Petit", birthDate: "1998-07-21", place: "Saint-Germain", verified: false, activated: true },
+  { key: "ines", email: "ines.durand@spider-sense.test", civility: "MRS", firstName: "Inès", lastName: "Durand", birthDate: "2003-02-11", place: "Vincennes", verified: false, activated: false },
+  { key: "kevin", email: "kevin.moreau@spider-sense.test", civility: "MR", firstName: "Kévin", lastName: "Moreau", birthDate: "1990-10-09", place: "Châtelet", verified: false, activated: true, disabled: true },
 ];
 
 export const INCIDENT_DESCRIPTIONS: Record<string, string[]> = {
@@ -366,10 +366,10 @@ export const HERO_REPLIES = [
 
 export const ARTICLES: { title: string; slug: string; html: string; daysAgo: number | null }[] = [
   {
-    title: "Heros-SOS est en ligne : comment déclarer un incident",
-    slug: "heros-sos-est-en-ligne",
+    title: "Spider Sense est en ligne : comment déclarer un incident",
+    slug: "spider-sense-est-en-ligne",
     daysAgo: 45,
-    html: "<p>La plateforme <strong>Heros-SOS</strong> rapproche enfin les citoyens et les super-héros. Depuis votre téléphone, un appui sur le buzzer suffit pour alerter les héros disponibles autour de vous.</p><h2>Trois gestes à retenir</h2><ol><li>Mettez-vous en sécurité.</li><li>Appuyez sur le buzzer SOS et confirmez le type d'incident.</li><li>Suivez l'intervention en direct depuis l'application.</li></ol><p>Les modérateurs vérifient chaque signalement pour éviter les doublons.</p>",
+    html: "<p>La plateforme <strong>Spider Sense</strong> rapproche enfin les citoyens et les super-héros. Depuis votre téléphone, un appui sur le buzzer suffit pour alerter les héros disponibles autour de vous.</p><h2>Trois gestes à retenir</h2><ol><li>Mettez-vous en sécurité.</li><li>Appuyez sur le buzzer SOS et confirmez le type d'incident.</li><li>Suivez l'intervention en direct depuis l'application.</li></ol><p>Les modérateurs vérifient chaque signalement pour éviter les doublons.</p>",
   },
   {
     title: "Bilan du mois : les vilains sous les verrous",

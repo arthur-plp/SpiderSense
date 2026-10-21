@@ -11,16 +11,16 @@ export { mailTemplates } from "./templates";
 
 export type MailMessage = MailContent & { to: string };
 
-const globalForMail = globalThis as unknown as { heroSosTransport?: Transporter };
+const globalForMail = globalThis as unknown as { spiderSenseTransport?: Transporter };
 
 /** Without SMTP_URL, emails go to the in-app preview mailbox (/dev/mails). */
 export const isMailPreviewMode = () => !process.env.SMTP_URL;
 
 async function deliver(message: MailMessage): Promise<void> {
   if (process.env.SMTP_URL) {
-    globalForMail.heroSosTransport ??= nodemailer.createTransport(process.env.SMTP_URL);
-    await globalForMail.heroSosTransport.sendMail({
-      from: process.env.MAIL_FROM ?? "Heros-SOS <no-reply@heros-sos.test>",
+    globalForMail.spiderSenseTransport ??= nodemailer.createTransport(process.env.SMTP_URL);
+    await globalForMail.spiderSenseTransport.sendMail({
+      from: process.env.MAIL_FROM ?? "Spider Sense <no-reply@spider-sense.test>",
       to: message.to,
       subject: message.subject,
       html: message.html,

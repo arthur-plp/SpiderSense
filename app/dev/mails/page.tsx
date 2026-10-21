@@ -35,7 +35,7 @@ export default async function MailboxPage({ searchParams }: PageProps<"/dev/mail
       <PageHeader
         eyebrow="Démo"
         title="Boîte mail de démonstration"
-        description="Aucun serveur SMTP n'est configuré : les emails envoyés par Heros-SOS (activation, mot de passe oublié, notifications…) sont conservés ici. Ouvrez-en un pour cliquer sur ses liens."
+        description="Aucun serveur SMTP n'est configuré : les emails envoyés par Spider Sense (activation, mot de passe oublié, notifications…) sont conservés ici. Ouvrez-en un pour cliquer sur ses liens."
         actions={<RefreshButton />}
       />
 
@@ -46,7 +46,7 @@ export default async function MailboxPage({ searchParams }: PageProps<"/dev/mail
           </label>
           <div className="relative flex-1">
             <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" aria-hidden />
-            <Input name="to" type="email" defaultValue={to ?? ""} placeholder="Destinataire, ex. citoyen@heros-sos.test" className="pl-10" />
+            <Input name="to" type="email" defaultValue={to ?? ""} placeholder="Destinataire, ex. citoyen@spider-sense.test" className="pl-10" />
           </div>
           <Button type="submit" variant="secondary">
             Filtrer

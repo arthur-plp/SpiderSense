@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/panel";
 
 export const metadata: Metadata = {
   title: "Confidentialité",
-  description: "Comment Heros-SOS traite vos données personnelles (RGPD) : données collectées, finalités, durées de conservation et droits.",
+  description: "Comment Spider Sense traite vos données personnelles (RGPD) : données collectées, finalités, durées de conservation et droits.",
 };
 
 const SECTIONS = [
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
         <PageHeader
           eyebrow="RGPD"
           title="Politique de confidentialité"
-          description="Heros-SOS ne collecte que ce qui est nécessaire pour mettre en relation citoyens et super-héros. Voici, simplement, ce que nous faisons de vos données."
+          description="Spider Sense ne collecte que ce qui est nécessaire pour mettre en relation citoyens et super-héros. Voici, simplement, ce que nous faisons de vos données."
         />
 
         <nav aria-label="Sommaire" className="glass mb-10 rounded-3xl p-5">
@@ -44,8 +44,8 @@ export default function PrivacyPage() {
 
         <div className="prose-hero [&_h2]:scroll-mt-24">
           <p>
-            Le responsable du traitement est l&apos;équipe Heros-SOS. Pour toute question, écrivez à{" "}
-            <a href="mailto:dpo@heros-sos.test">dpo@heros-sos.test</a>.
+            Le responsable du traitement est l&apos;équipe Spider Sense. Pour toute question, écrivez à{" "}
+            <a href="mailto:dpo@spider-sense.test">dpo@spider-sense.test</a>.
           </p>
 
           <h2 id="donnees">1. Données collectées</h2>
@@ -113,7 +113,7 @@ export default function PrivacyPage() {
           <p>
             Vous pouvez accéder à vos données, les rectifier, les faire effacer, en demander la portabilité ou vous opposer à leur traitement.
             La plupart des informations se modifient directement depuis « Mon compte » ; un changement d&apos;adresse email est validé par un
-            modérateur. Pour toute autre demande, écrivez à <a href="mailto:dpo@heros-sos.test">dpo@heros-sos.test</a>. Vous pouvez aussi
+            modérateur. Pour toute autre demande, écrivez à <a href="mailto:dpo@spider-sense.test">dpo@spider-sense.test</a>. Vous pouvez aussi
             saisir la <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener noreferrer">CNIL</a>.
           </p>
         </div>

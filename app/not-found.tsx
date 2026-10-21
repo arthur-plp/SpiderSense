@@ -13,7 +13,7 @@ export default function NotFound() {
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-160 bg-[radial-gradient(60rem_30rem_at_50%_-10rem,rgb(56_189_248/0.18),transparent)]" />
       <header className="border-b border-white/6">
         <Container className="flex h-16 items-center">
-          <Link href="/" className="rounded-lg" aria-label="Heros-SOS, retour à l'accueil">
+          <Link href="/" className="rounded-lg" aria-label="Spider Sense, retour à l'accueil">
             <Logo />
           </Link>
         </Container>

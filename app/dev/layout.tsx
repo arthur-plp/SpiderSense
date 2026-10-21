@@ -5,7 +5,7 @@ import { Container } from "@/components/site/container";
 import { Logo } from "@/components/site/logo";
 
 export const metadata: Metadata = {
-  title: { default: "Outils de démo", template: "%s · Outils de démo · Heros-SOS" },
+  title: { default: "Outils de démo", template: "%s · Outils de démo · Spider Sense" },
   robots: { index: false, follow: false },
 };
 
@@ -14,7 +14,7 @@ export default function DevLayout({ children }: LayoutProps<"/dev">) {
     <div className="flex flex-1 flex-col">
       <header className="border-b border-white/6 bg-ink-900/80">
         <Container className="flex h-14 items-center gap-3">
-          <Link href="/" className="rounded-lg" aria-label="Heros-SOS, retour au site">
+          <Link href="/" className="rounded-lg" aria-label="Spider Sense, retour au site">
             <Logo />
           </Link>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/15 px-2.5 py-1 text-xs font-semibold text-amber-200 ring-1 ring-brand/30">

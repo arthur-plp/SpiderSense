@@ -12,7 +12,7 @@ import { safeRedirectPath } from "@/lib/server/url";
 
 export const metadata: Metadata = {
   title: "Connexion",
-  description: "Connectez-vous à Heros-SOS avec votre email, ou votre alias si vous êtes un super-héros.",
+  description: "Connectez-vous à Spider Sense avec votre email, ou votre alias si vous êtes un super-héros.",
 };
 
 export default function LoginPage({ searchParams }: PageProps<"/connexion">) {

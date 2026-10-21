@@ -15,7 +15,7 @@ const migrationsFolder = path.join(process.cwd(), "db", "migrations");
 // Reuse the connection across hot reloads and across the RSC/SSR module
 // graphs, otherwise each one would open its own pool (or PGlite instance).
 const globalForDb = globalThis as unknown as {
-  heroSosDb?: Promise<Database>;
+  spiderSenseDb?: Promise<Database>;
 };
 
 /**
@@ -23,11 +23,11 @@ const globalForDb = globalThis as unknown as {
  * otherwise an embedded PGlite instance stored in .data/pglite (local demo).
  */
 export function getDb(): Promise<Database> {
-  globalForDb.heroSosDb ??= openDatabase().catch((error: unknown) => {
-    globalForDb.heroSosDb = undefined;
+  globalForDb.spiderSenseDb ??= openDatabase().catch((error: unknown) => {
+    globalForDb.spiderSenseDb = undefined;
     throw error;
   });
-  return globalForDb.heroSosDb;
+  return globalForDb.spiderSenseDb;
 }
 
 async function openDatabase(): Promise<Database> {

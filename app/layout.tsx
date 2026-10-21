@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Heros-SOS — Citoyens et super-héros, ensemble",
-    template: "%s · Heros-SOS",
+    default: "Spider Sense — Citoyens et super-héros, ensemble",
+    template: "%s · Spider Sense",
   },
   description:
-    "Heros-SOS rapproche les citoyens et les super-héros : signalez un incident en un geste, suivez l'intervention en direct.",
-  applicationName: "Heros-SOS",
+    "Spider Sense rapproche les citoyens et les super-héros : signalez un incident en un geste, suivez l'intervention en direct.",
+  applicationName: "Spider Sense",
 };
 
 export const viewport: Viewport = {

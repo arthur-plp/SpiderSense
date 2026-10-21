@@ -13,7 +13,7 @@ function Brand() {
     <Link href="/admin" className="flex items-center gap-2.5 rounded-lg">
       <span className="rounded-full bg-sos px-2 py-1 text-[11px] font-bold tracking-[0.08em] text-white">SOS</span>
       <span className="leading-tight">
-        <span className="block text-sm font-bold text-white">Heros-SOS</span>
+        <span className="block text-sm font-bold text-white">Spider Sense</span>
         <span className="block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">Administration</span>
       </span>
     </Link>

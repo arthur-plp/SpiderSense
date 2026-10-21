@@ -36,7 +36,7 @@ function render({ subject, title, paragraphs, details, cta, rawHtml, footer }: L
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0b1222;border:1px solid #1e2b45;border-radius:18px;overflow:hidden">
 <tr><td style="padding:22px 28px;background:linear-gradient(135deg,#0c1f3f,#0b1222);border-bottom:1px solid #1e2b45">
 <span style="display:inline-block;padding:6px 10px;border-radius:999px;background:#ff3d5a;color:#fff;font-weight:700;font-size:12px;letter-spacing:.08em">SOS</span>
-<span style="color:#f8fafc;font-weight:700;font-size:18px;margin-left:8px">Heros-SOS</span></td></tr>
+<span style="color:#f8fafc;font-weight:700;font-size:18px;margin-left:8px">Spider Sense</span></td></tr>
 <tr><td style="padding:28px">
 <h1 style="margin:0 0 16px;color:#f8fafc;font-size:22px;line-height:1.3">${escapeHtml(title)}</h1>
 ${paragraphs.map((p) => `<p style="margin:0 0 14px;color:#cbd5e1;font-size:15px;line-height:1.6">${escapeHtml(p)}</p>`).join("")}
@@ -44,7 +44,7 @@ ${detailRows ? `<table role="presentation" style="margin:8px 0 18px;border-top:1
 ${rawHtml ? `<div style="color:#cbd5e1;font-size:15px;line-height:1.6">${rawHtml}</div>` : ""}
 ${cta ? `<p style="margin:22px 0 6px"><a href="${escapeHtml(cta.url)}" style="display:inline-block;background:#38bdf8;color:#04121f;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:12px">${escapeHtml(cta.label)}</a></p><p style="margin:10px 0 0;color:#64748b;font-size:12px;word-break:break-all">${escapeHtml(cta.url)}</p>` : ""}
 </td></tr>
-<tr><td style="padding:16px 28px;border-top:1px solid #1e2b45;color:#64748b;font-size:12px;line-height:1.5">${escapeHtml(footer ?? "Heros-SOS — la plateforme qui rapproche citoyens et super-héros. Cet email vous a été envoyé automatiquement.")}</td></tr>
+<tr><td style="padding:16px 28px;border-top:1px solid #1e2b45;color:#64748b;font-size:12px;line-height:1.5">${escapeHtml(footer ?? "Spider Sense — la plateforme qui rapproche citoyens et super-héros. Cet email vous a été envoyé automatiquement.")}</td></tr>
 </table></td></tr></table></body></html>`;
   const text = [
     title,
@@ -54,7 +54,7 @@ ${cta ? `<p style="margin:22px 0 6px"><a href="${escapeHtml(cta.url)}" style="di
     ...(rawHtml ? ["", rawHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()] : []),
     ...(cta ? ["", `${cta.label} : ${cta.url}`] : []),
     "",
-    footer ?? "Heros-SOS",
+    footer ?? "Spider Sense",
   ].join("\n");
   return { subject, html, text };
 }
@@ -80,10 +80,10 @@ const incidentDetails = (incident: IncidentMailInfo): [string, string][] => [
 export const mailTemplates = {
   activation: (firstName: string, url: string) =>
     render({
-      subject: "Activez votre compte Heros-SOS",
+      subject: "Activez votre compte Spider Sense",
       title: `Bienvenue ${firstName} !`,
       paragraphs: [
-        "Votre inscription sur Heros-SOS est presque terminée.",
+        "Votre inscription sur Spider Sense est presque terminée.",
         "Cliquez sur le bouton ci-dessous pour activer votre compte. Le lien est valable 7 jours.",
       ],
       cta: { label: "Activer mon compte", url },
@@ -107,7 +107,7 @@ export const mailTemplates = {
       subject: "Réinitialisation de votre mot de passe",
       title: `Bonjour ${firstName},`,
       paragraphs: [
-        "Vous avez demandé à réinitialiser votre mot de passe Heros-SOS.",
+        "Vous avez demandé à réinitialiser votre mot de passe Spider Sense.",
         "Ce lien est valable une heure. Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.",
       ],
       cta: { label: "Choisir un nouveau mot de passe", url },
@@ -175,7 +175,7 @@ export const mailTemplates = {
 
   newsletterWelcome: (unsubscribeUrl: string) =>
     render({
-      subject: "Inscription à la newsletter Heros-SOS confirmée",
+      subject: "Inscription à la newsletter Spider Sense confirmée",
       title: "Merci pour votre inscription !",
       paragraphs: [
         "Vous recevrez chaque mois les statistiques des incidents, le bilan des interventions et nos articles.",
@@ -190,7 +190,7 @@ export const mailTemplates = {
       title: subject,
       paragraphs: [],
       rawHtml: contentHtml,
-      footer: `Vous recevez cet email car vous êtes inscrit à la newsletter Heros-SOS. Se désinscrire : ${unsubscribeUrl}`,
+      footer: `Vous recevez cet email car vous êtes inscrit à la newsletter Spider Sense. Se désinscrire : ${unsubscribeUrl}`,
     }),
 
   heroApplicationReceived: (alias: string, applicant: string, url: string) =>

@@ -114,7 +114,7 @@ export function RegisterForm() {
               className="mt-0.5 size-4 shrink-0 accent-sky-400"
             />
             <span>
-              J&apos;accepte que mes données soient traitées par Heros-SOS pour gérer mon compte et mes signalements, conformément à la{" "}
+              J&apos;accepte que mes données soient traitées par Spider Sense pour gérer mon compte et mes signalements, conformément à la{" "}
               <Link href="/confidentialite" target="_blank" className={authLinkClass}>
                 politique de confidentialité
                 <span className="sr-only"> (nouvel onglet)</span>

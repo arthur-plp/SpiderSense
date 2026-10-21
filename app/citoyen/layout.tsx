@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: { default: "Espace citoyen", template: "%s · Heros-SOS" },
+  title: { default: "Espace citoyen", template: "%s · Spider Sense" },
 };
 
 export const viewport: Viewport = {

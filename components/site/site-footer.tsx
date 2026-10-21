@@ -49,7 +49,7 @@ export function SiteFooter() {
           <div className="max-w-sm">
             <Logo />
             <p className="mt-4 text-sm leading-relaxed text-slate-400">
-              Heros-SOS rapproche les citoyens et les super-héros de Paris : un geste pour donner l&apos;alerte, une intervention suivie
+              Spider Sense rapproche les citoyens et les super-héros de Paris : un geste pour donner l&apos;alerte, une intervention suivie
               en direct, une réputation construite par les citoyens.
             </p>
           </div>
@@ -73,7 +73,7 @@ export function SiteFooter() {
       </Container>
       <div className="border-t border-white/6">
         <Container className="flex flex-col gap-3 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>Heros-SOS — projet de démonstration. Les personnages Marvel appartiennent à leurs ayants droit.</p>
+          <p>Spider Sense — projet de démonstration. Les personnages Marvel appartiennent à leurs ayants droit.</p>
           <p className="flex items-center gap-1.5 text-slate-400">
             <Phone size={13} aria-hidden />
             Urgence réelle ? Composez le <strong className="text-white">112</strong>.

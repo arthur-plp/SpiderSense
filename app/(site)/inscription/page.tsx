@@ -9,7 +9,7 @@ import { redirectIfSignedIn } from "@/lib/server/auth";
 
 export const metadata: Metadata = {
   title: "Créer un compte",
-  description: "Inscrivez-vous sur Heros-SOS pour signaler un incident ou, si vous êtes un super-héros, intervenir.",
+  description: "Inscrivez-vous sur Spider Sense pour signaler un incident ou, si vous êtes un super-héros, intervenir.",
 };
 
 export default function RegisterPage() {

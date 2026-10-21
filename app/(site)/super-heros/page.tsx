@@ -11,7 +11,7 @@ import { listHeroes } from "@/lib/server/services/heroes";
 
 export const metadata: Metadata = {
   title: "Super-héros",
-  description: "Les super-héros validés par Heros-SOS : pouvoirs, disponibilité, interventions et note donnée par les citoyens.",
+  description: "Les super-héros validés par Spider Sense : pouvoirs, disponibilité, interventions et note donnée par les citoyens.",
 };
 
 export default function HeroesPage() {
@@ -19,7 +19,7 @@ export default function HeroesPage() {
     <Container className="py-10 sm:py-14">
       <PageHeader
         eyebrow="Annuaire"
-        title="Les super-héros de Heros-SOS"
+        title="Les super-héros de Spider Sense"
         description="Tous les héros validés par notre équipe de modération, avec leurs pouvoirs, leurs interventions et la note que leur donnent les citoyens."
       />
       <Suspense

@@ -43,7 +43,7 @@ export function TopBarFrame({ children }: { children?: React.ReactNode }) {
           <Shield className="size-5" aria-hidden />
         </span>
         <span className="leading-tight">
-          <span className="block text-sm font-bold tracking-tight text-white">Heros-SOS</span>
+          <span className="block text-sm font-bold tracking-tight text-white">Spider Sense</span>
           <span className="block text-[11px] uppercase tracking-[0.16em] text-sky-300/80">Centre d&apos;opérations</span>
         </span>
       </Link>
