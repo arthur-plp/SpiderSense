@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Spider Sense
 
-## Getting Started
+Plateforme qui met en relation les citoyens et les super-héros : un citoyen signale un incident depuis son téléphone, les héros disponibles à proximité interviennent, la modération supervise.
 
-First, run the development server:
+Stack : Next.js (pages + API), PostgreSQL, Drizzle ORM.
+
+## Prérequis
+
+- **Node.js 22** et **npm 11** (`npm install -g npm@11` si besoin)
+- **Docker Desktop**, pour PostgreSQL
+
+## Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Puis, avec Docker Desktop lancé :
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+docker compose up -d db   # PostgreSQL sur le port 5433
+npm run db:migrate        # crée les tables
+npm run db:seed           # charge les données de démo
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+L'application est sur http://localhost:3000.
 
-## Learn More
+> **Ne lancez pas `docker compose up` sans préciser `db`** : le conteneur `app` démarrerait aussi et prendrait le port 3000. `npm run dev` passerait alors sur 3001. Si c'est arrivé : `docker compose stop app`.
 
-To learn more about Next.js, take a look at the following resources:
+### Sans Docker
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Sans `DATABASE_URL` (supprimez ou commentez la ligne dans `.env`), l'application utilise une base PostgreSQL embarquée (PGlite, stockée dans `.data/pglite`). Elle est migrée et remplie avec les données de démo au premier démarrage : `npm install` puis `npm run dev` suffisent.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Comptes de démo
 
-## Deploy on Vercel
+Mot de passe commun : **`Demo1234!`**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Rôle | Email | Espace |
+|---|---|---|
+| Admin | `admin@spider-sense.test` | `/admin` |
+| Modérateur | `moderateur@spider-sense.test` | `/admin` |
+| Héros | `spiderman@spider-sense.test` | `/heros` |
+| Citoyen | `citoyen@spider-sense.test` | `/citoyen` |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Pages utiles en développement
+
+| URL | Contenu |
+|---|---|
+| http://localhost:3000/dev/mails | Mails envoyés par l'application (activation, mot de passe oublié…). Sans `SMTP_URL`, aucun mail ne part : ils sont affichés ici |
+| http://localhost:3000/api-docs | Documentation de l'API (Swagger) |
+
+## Scripts
+
+| Commande | Effet |
+|---|---|
+| `npm run dev` | Serveur de développement |
+| `npm run build` / `npm start` | Build et serveur de production |
+| `npm run lint` | ESLint |
+| `npm run db:generate` | Génère une migration à partir des changements de `db/schema.ts` |
+| `npm run db:migrate` | Applique les migrations en attente |
+| `npm run db:seed` | Charge les données de démo (seulement si la base n'a aucun utilisateur) |
+| `npm run db:studio` | Drizzle Studio (développement uniquement) |
+
+## Repartir d'une base vide
+
+```bash
+docker compose down -v      # supprime le volume PostgreSQL
+docker compose up -d db
+npm run db:migrate
+npm run db:seed
+```
+
+## Dépannage
+
+- **`Turbopack error` / `task is missing in memory`** après un changement de branche : arrêtez `npm run dev`, supprimez le dossier `.next`, relancez.
+- **`npm run db:migrate` échoue avec une erreur de connexion** : Docker Desktop n'est pas lancé ou le conteneur `db` est arrêté (`docker compose up -d db`).
