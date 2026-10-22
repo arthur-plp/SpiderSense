@@ -1,12 +1,11 @@
 "use client";
 
 import { Camera, Trash2 } from "lucide-react";
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form";
-import { idleState } from "@/lib/action-state";
-import { removeAvatarAction, uploadAvatarAction } from "@/lib/actions/account";
+import { useApiForm } from "@/lib/use-api-form";
 
 const SIZE = 320;
 
@@ -22,8 +21,9 @@ async function resize(file: File): Promise<Blob> {
 }
 
 export function AvatarForm({ avatarUrl, label }: { avatarUrl: string | null; label: string }) {
-  const [state, action, pending] = useActionState(uploadAvatarAction, idleState);
+  const [state, action, pending] = useApiForm({ method: "PUT", path: "/api/me/avatar" });
   const [preview, setPreview] = useState<string | null>(null);
+  const [, removeAction] = useApiForm({ method: "DELETE", path: "/api/me/avatar" }, () => setPreview(null));
   const [, startTransition] = useTransition();
   const input = useRef<HTMLInputElement>(null);
 
@@ -47,7 +47,7 @@ export function AvatarForm({ avatarUrl, label }: { avatarUrl: string | null; lab
             {pending ? "Envoi…" : avatarUrl ? "Changer la photo" : "Ajouter une photo"}
           </Button>
           {avatarUrl && (
-            <form action={removeAvatarAction} onSubmit={() => setPreview(null)}>
+            <form action={removeAction}>
               <Button type="submit" variant="ghost" size="sm">
                 <Trash2 className="size-4" aria-hidden />
                 Retirer

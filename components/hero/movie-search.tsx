@@ -2,14 +2,16 @@
 
 import { Film, LoaderCircle, Plus, Search } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { requestMovieAction } from "@/lib/actions/account";
+import { apiRequest } from "@/lib/api-client";
 
 type ImdbTitle = { imdbId: string; title: string; year: number | null; posterUrl: string | null; cast: string | null; kind: string };
 
 /** Live IMDb search; adding a movie sends it to moderation (5.8.4). */
 export function MovieSearch({ knownIds }: { knownIds: string[] }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ImdbTitle[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -39,8 +41,9 @@ export function MovieSearch({ knownIds }: { knownIds: string[] }) {
 
   const add = (title: ImdbTitle) =>
     startTransition(async () => {
-      const result = await requestMovieAction(title.imdbId);
-      setFeedback((all) => ({ ...all, [title.imdbId]: result.ok ? "Envoyé en modération" : result.error ?? "Erreur" }));
+      const result = await apiRequest("POST", "/api/me/movies", { imdbId: title.imdbId });
+      setFeedback((all) => ({ ...all, [title.imdbId]: result.ok ? "Envoyé en modération" : result.error }));
+      if (result.ok) router.refresh();
     });
 
   return (

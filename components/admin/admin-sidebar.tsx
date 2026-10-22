@@ -1,9 +1,10 @@
 import { House, LogOut } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { ApiForm } from "@/components/ui/api-form";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { logout } from "@/lib/actions/auth";
+import { LOGOUT_ENDPOINT } from "@/lib/api-client";
 import { ROLE_LABELS } from "@/lib/labels";
 import { requireStaff } from "@/lib/server/auth";
 import { AdminNavLinks, MobileAdminBar } from "./admin-nav";
@@ -63,7 +64,7 @@ function SidebarFooter() {
           <House className="size-4.5 text-slate-500" aria-hidden />
           Retour au site
         </Link>
-        <form action={logout}>
+        <ApiForm endpoint={LOGOUT_ENDPOINT}>
           <button
             type="submit"
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-400 hover:bg-rose-500/10 hover:text-rose-200"
@@ -71,7 +72,7 @@ function SidebarFooter() {
             <LogOut className="size-4.5 text-slate-500" aria-hidden />
             Se déconnecter
           </button>
-        </form>
+        </ApiForm>
       </div>
     </div>
   );

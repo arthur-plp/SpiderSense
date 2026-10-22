@@ -5,7 +5,6 @@ import { AuthShell } from "@/components/site/auth-shell";
 import { ConfirmActionForm } from "@/components/site/confirm-action-form";
 import { ResendActivationForm } from "@/components/site/resend-activation-form";
 import { FormSkeleton } from "@/components/site/skeleton";
-import { activateAccount } from "@/lib/actions/auth";
 import { getMailboxHref } from "@/lib/server/services/mailbox";
 
 export const metadata: Metadata = { title: "Activation du compte", robots: { index: false } };
@@ -28,7 +27,7 @@ async function ActivationContent({ params }: Pick<PageProps<"/activation/[token]
   const { token } = await params;
   return (
     <ConfirmActionForm
-      action={activateAccount.bind(null, token)}
+      endpoint={{ method: "POST", path: "/api/auth/activate", body: { token }, redirectTo: "/connexion?active=1" }}
       label="Activer mon compte"
       pendingLabel="Activation…"
       icon={<BadgeCheck size={18} aria-hidden />}

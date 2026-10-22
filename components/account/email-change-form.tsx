@@ -1,16 +1,15 @@
 "use client";
 
 import { Clock } from "lucide-react";
-import { useActionState } from "react";
 import { Field, FormMessage, Input } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { cancelEmailChangeAction, requestEmailChangeAction } from "@/lib/actions/account";
 import { formatDate } from "@/lib/format";
+import { useApiForm } from "@/lib/use-api-form";
 
 /** Email changes go through moderation (5.8.3 / 6.1.1). */
 export function EmailChangeForm({ currentEmail, pending }: { currentEmail: string; pending: { newEmail: string; createdAt: Date } | null }) {
-  const [state, action] = useActionState(requestEmailChangeAction, idleState);
+  const [state, action] = useApiForm({ method: "POST", path: "/api/me/email-change" });
+  const [, cancelAction] = useApiForm({ method: "DELETE", path: "/api/me/email-change" });
   if (pending) {
     return (
       <div className="flex flex-col gap-3 rounded-xl border border-amber-300/25 bg-amber-300/5 p-4 text-sm">
@@ -20,7 +19,7 @@ export function EmailChangeForm({ currentEmail, pending }: { currentEmail: strin
             Changement vers <strong>{pending.newEmail}</strong> demandé le {formatDate(pending.createdAt)} : en attente de validation par un modérateur.
           </span>
         </p>
-        <form action={cancelEmailChangeAction}>
+        <form action={cancelAction}>
           <SubmitButton variant="secondary" size="sm">Annuler la demande</SubmitButton>
         </form>
       </div>

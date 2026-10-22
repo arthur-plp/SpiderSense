@@ -1,9 +1,10 @@
 import { LayoutDashboard, LogIn, LogOut, UserPlus } from "lucide-react";
+import { ApiForm } from "@/components/ui/api-form";
 import { Avatar } from "@/components/ui/avatar";
 import { LinkButton } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { logout } from "@/lib/actions/auth";
+import { LOGOUT_ENDPOINT } from "@/lib/api-client";
 import { getCurrentUser, homePathFor } from "@/lib/server/auth";
 import { Skeleton } from "./skeleton";
 
@@ -40,7 +41,7 @@ export async function HeaderAccount({ variant }: { variant: Variant }) {
         <LayoutDashboard size={16} aria-hidden />
         Mon espace
       </LinkButton>
-      <form action={logout} className={cn(mobile && "flex")}>
+      <ApiForm endpoint={LOGOUT_ENDPOINT} className={cn(mobile && "flex")}>
         {mobile ? (
           <SubmitButton variant="secondary" size="lg" className="flex-1">
             <LogOut size={16} aria-hidden />
@@ -52,7 +53,7 @@ export async function HeaderAccount({ variant }: { variant: Variant }) {
             <span className="sr-only">Se déconnecter</span>
           </SubmitButton>
         )}
-      </form>
+      </ApiForm>
     </div>
   );
 }

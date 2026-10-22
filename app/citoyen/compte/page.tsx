@@ -2,6 +2,7 @@ import { LogOut } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ApiForm } from "@/components/ui/api-form";
 import { AvatarForm } from "@/components/account/avatar-form";
 import { ContactForm } from "@/components/account/contact-form";
 import { EmailChangeForm } from "@/components/account/email-change-form";
@@ -13,7 +14,7 @@ import { MobilePage, MobilePageSkeleton } from "@/components/citizen/mobile-page
 import { LinkButton } from "@/components/ui/button";
 import { Panel, SectionTitle } from "@/components/ui/panel";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { logout } from "@/lib/actions/auth";
+import { LOGOUT_ENDPOINT } from "@/lib/api-client";
 import { requireUser } from "@/lib/server/auth";
 import { getAccount } from "@/lib/server/services/account";
 
@@ -68,11 +69,11 @@ async function Account() {
             <HeroApplication application={account.hero ? { alias: account.hero.alias, status: account.hero.status, powers: account.hero.powers, bio: account.hero.bio } : null} />
           </Panel>
         )}
-        <form action={logout}>
+        <ApiForm endpoint={LOGOUT_ENDPOINT}>
           <SubmitButton variant="secondary" className="w-full">
             <LogOut className="size-4" aria-hidden /> Se déconnecter
           </SubmitButton>
-        </form>
+        </ApiForm>
       </div>
     </MobilePage>
   );

@@ -1,13 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
 import { Field, FormMessage, Input } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { changePasswordAction } from "@/lib/actions/account";
+import { useApiForm } from "@/lib/use-api-form";
 
 export function PasswordForm() {
-  const [state, action] = useActionState(changePasswordAction, idleState);
+  const [state, action] = useApiForm({ method: "PUT", path: "/api/me/password" });
   const errors = state.fieldErrors ?? {};
   return (
     <form action={action} className="flex flex-col gap-4">

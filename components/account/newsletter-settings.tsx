@@ -1,6 +1,6 @@
 import { BellOff, BellRing, Mail } from "lucide-react";
+import { ApiForm } from "@/components/ui/api-form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { setNewsletterEnabledAction, subscribeMeAction, unsubscribeMeAction } from "@/lib/actions/account";
 
 /** 4.2: subscribe with the account email, pause, or unsubscribe. */
 export function NewsletterSettings({ subscription }: { subscription: { isEnabled: boolean } | null }) {
@@ -8,11 +8,11 @@ export function NewsletterSettings({ subscription }: { subscription: { isEnabled
     return (
       <div className="flex flex-col gap-3 text-sm text-slate-300">
         <p>Recevez chaque mois les statistiques des incidents, le bilan des interventions et nos articles.</p>
-        <form action={subscribeMeAction}>
+        <ApiForm endpoint={{ method: "POST", path: "/api/me/newsletter" }}>
           <SubmitButton size="sm" pendingLabel="Inscription…">
             <Mail className="size-4" aria-hidden /> M&apos;inscrire avec mon adresse email
           </SubmitButton>
-        </form>
+        </ApiForm>
       </div>
     );
   }
@@ -23,16 +23,16 @@ export function NewsletterSettings({ subscription }: { subscription: { isEnabled
         {subscription.isEnabled ? "Vous recevez la newsletter." : "Réception de la newsletter désactivée."}
       </p>
       <div className="flex flex-wrap gap-2">
-        <form action={setNewsletterEnabledAction.bind(null, !subscription.isEnabled)}>
+        <ApiForm endpoint={{ method: "PATCH", path: "/api/me/newsletter", body: { enabled: !subscription.isEnabled } }}>
           <SubmitButton variant="secondary" size="sm">
             {subscription.isEnabled ? "Désactiver la réception" : "Réactiver la réception"}
           </SubmitButton>
-        </form>
-        <form action={unsubscribeMeAction}>
+        </ApiForm>
+        <ApiForm endpoint={{ method: "DELETE", path: "/api/me/newsletter" }}>
           <SubmitButton variant="ghost" size="sm" className="text-rose-300 hover:text-rose-200">
             Me désinscrire
           </SubmitButton>
-        </form>
+        </ApiForm>
       </div>
       <p className="text-xs text-slate-500">La désinscription supprime votre adresse de la liste de diffusion.</p>
     </div>

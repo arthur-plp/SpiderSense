@@ -1,14 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
 import { Field, FormMessage, Input, Textarea } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { updateHeroProfileAction } from "@/lib/actions/account";
+import { useApiForm } from "@/lib/use-api-form";
 
 /** Hero personalisation: powers and presentation shown to citizens. */
 export function HeroProfileForm({ bio, powers }: { bio: string | null; powers: string[] }) {
-  const [state, action] = useActionState(updateHeroProfileAction, idleState);
+  const [state, action] = useApiForm({ method: "PUT", path: "/api/me/hero-profile" });
   const errors = state.fieldErrors ?? {};
   return (
     <form action={action} className="flex flex-col gap-4">

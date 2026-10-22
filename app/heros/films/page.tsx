@@ -3,10 +3,10 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { HeroPage } from "@/components/hero/hero-page";
 import { MovieSearch } from "@/components/hero/movie-search";
+import { ApiForm } from "@/components/ui/api-form";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, PageHeader, Panel, SectionTitle } from "@/components/ui/panel";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { removeMovieAction } from "@/lib/actions/account";
 import { REVIEW_STATUS_LABELS, REVIEW_STATUS_TONES } from "@/lib/labels";
 import { requireHero } from "@/lib/server/auth";
 import { listHeroMovies } from "@/lib/server/services/movies";
@@ -49,12 +49,12 @@ export default async function HeroMoviesPage() {
               <div className="flex flex-1 flex-col gap-2 p-3">
                 <p className="text-sm font-semibold leading-snug text-white">{movie.title}</p>
                 <p className="text-xs text-slate-500">{movie.year}</p>
-                <form action={removeMovieAction.bind(null, movie.movieId)} className="mt-auto">
+                <ApiForm endpoint={{ method: "DELETE", path: `/api/me/movies/${movie.movieId}` }} className="mt-auto">
                   <SubmitButton variant="ghost" size="sm" className="-ml-2 text-slate-400 hover:text-rose-300" aria-label={`Retirer ${movie.title}`}>
                     <Trash2 className="size-3.5" aria-hidden />
                     Retirer
                   </SubmitButton>
-                </form>
+                </ApiForm>
               </div>
             </li>
           ))}

@@ -2,18 +2,16 @@
 
 import { Clock, ShieldCheck, ShieldX } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
 import { Field, FormMessage, Input, Textarea } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { applyAsHeroAction } from "@/lib/actions/account";
 import type { ReviewStatus } from "@/lib/labels";
+import { useApiForm } from "@/lib/use-api-form";
 
 type Application = { alias: string; status: ReviewStatus; powers: string[]; bio: string | null } | null;
 
 /** Becoming a hero: same sign-up form for everyone, then a request reviewed by moderators. */
 export function HeroApplication({ application }: { application: Application }) {
-  const [state, action] = useActionState(applyAsHeroAction, idleState);
+  const [state, action] = useApiForm({ method: "POST", path: "/api/me/hero-application" });
   if (application?.status === "APPROVED") {
     return (
       <p className="flex items-center gap-2 text-sm text-emerald-200">

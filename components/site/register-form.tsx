@@ -2,12 +2,11 @@
 
 import { Lock, MapPin, UserPlus, UserRound } from "lucide-react";
 import Link from "next/link";
-import { type ReactNode, useActionState, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Field, FormMessage, Input, Select } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { register } from "@/lib/actions/auth";
 import { type Civility, CIVILITY_LABELS } from "@/lib/labels";
+import { useApiForm } from "@/lib/use-api-form";
 import { authLinkClass } from "./auth-shell";
 import { PasswordInput } from "./password-input";
 
@@ -15,7 +14,11 @@ const CIVILITIES = Object.entries(CIVILITY_LABELS) as [Civility, string][];
 
 /** Sign-up (5.4): one form for citizens and heroes. Field names match `registerSchema`. */
 export function RegisterForm() {
-  const [state, formAction] = useActionState(register, idleState);
+  const [state, formAction] = useApiForm({
+    method: "POST",
+    path: "/api/auth/register",
+    redirectTo: "/inscription/confirmation?email={user.email}",
+  });
   const formRef = useRef<HTMLFormElement>(null);
   const values = state.values ?? {};
   const errors = state.fieldErrors ?? {};

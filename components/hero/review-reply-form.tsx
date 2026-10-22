@@ -1,15 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormMessage, Textarea } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { replyToReviewAction } from "@/lib/actions/account";
+import { useApiForm } from "@/lib/use-api-form";
 
 export function ReviewReplyForm({ reviewId }: { reviewId: string }) {
   const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(replyToReviewAction.bind(null, reviewId), idleState);
+  const [state, action] = useApiForm({ method: "PUT", path: `/api/reviews/${reviewId}/reply` });
   if (!open) {
     return (
       <Button variant="ghost" size="sm" className="mt-2 px-0 text-sky-300 hover:bg-transparent" onClick={() => setOpen(true)}>

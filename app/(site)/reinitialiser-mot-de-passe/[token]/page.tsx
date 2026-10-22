@@ -6,7 +6,6 @@ import { Notice } from "@/components/site/notice";
 import { ResetPasswordForm } from "@/components/site/reset-password-form";
 import { FormSkeleton } from "@/components/site/skeleton";
 import { LinkButton } from "@/components/ui/button";
-import { completePasswordReset } from "@/lib/actions/auth";
 import { isUserTokenValid } from "@/lib/server/tokens";
 
 export const metadata: Metadata = { title: "Nouveau mot de passe", robots: { index: false } };
@@ -36,5 +35,9 @@ async function ResetPasswordContent({ params }: Pick<PageProps<"/reinitialiser-m
       </div>
     );
   }
-  return <ResetPasswordForm action={completePasswordReset.bind(null, token)} />;
+  return (
+    <ResetPasswordForm
+      endpoint={{ method: "POST", path: "/api/auth/reset-password", body: { token }, redirectTo: "/connexion?reset=1" }}
+    />
+  );
 }

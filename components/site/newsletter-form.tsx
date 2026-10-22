@@ -2,16 +2,14 @@
 
 import { Send } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
 import { cn } from "@/components/ui/cn";
 import { Input } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { subscribeToNewsletter } from "@/lib/actions/newsletter";
+import { useApiForm } from "@/lib/use-api-form";
 
 /** Anonymous newsletter sign-up (4.2). Disappears once the cookie is set. */
 export function NewsletterForm() {
-  const [state, formAction] = useActionState(subscribeToNewsletter, idleState);
+  const [state, formAction] = useApiForm({ method: "POST", path: "/api/newsletter/subscriptions" });
   const error = state.fieldErrors?.email?.[0];
   return (
     <form action={formAction} className="w-full">

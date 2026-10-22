@@ -1,7 +1,8 @@
 import { LogOut, Shield } from "lucide-react";
 import Link from "next/link";
+import { ApiForm } from "@/components/ui/api-form";
 import { Avatar } from "@/components/ui/avatar";
-import { logout } from "@/lib/actions/auth";
+import { LOGOUT_ENDPOINT } from "@/lib/api-client";
 import { requireHero } from "@/lib/server/auth";
 import { getHero } from "@/lib/server/services/heroes";
 import { DutyToggle } from "./duty-toggle";
@@ -25,11 +26,11 @@ export async function HeroTopBar() {
             </p>
           </div>
         </div>
-        <form action={logout}>
+        <ApiForm endpoint={LOGOUT_ENDPOINT}>
           <button type="submit" className="flex size-9 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white" aria-label="Se déconnecter" title="Se déconnecter">
             <LogOut className="size-4" />
           </button>
-        </form>
+        </ApiForm>
       </div>
     </TopBarFrame>
   );

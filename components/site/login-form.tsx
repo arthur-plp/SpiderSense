@@ -2,12 +2,11 @@
 
 import { FlaskConical, LogIn, MailWarning } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useRef } from "react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FormMessage, Input } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { login } from "@/lib/actions/auth";
+import { useApiForm } from "@/lib/use-api-form";
 import { authLinkClass } from "./auth-shell";
 import { PasswordInput } from "./password-input";
 import { ResendActivationForm } from "./resend-activation-form";
@@ -31,7 +30,13 @@ export function LoginForm({
   showDemoAccounts: boolean;
   mailboxHref: string | null;
 }) {
-  const [state, formAction] = useActionState(login, idleState);
+  // Back to the protected page that sent here, else the user's own space.
+  const [state, formAction] = useApiForm({
+    method: "POST",
+    path: "/api/auth/login",
+    redirectTo: next ?? "{homePath}",
+    fullReload: true,
+  });
   const identifierRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const unverifiedEmail = state.values?.unverifiedEmail;

@@ -1,17 +1,18 @@
 "use client";
 
-import { type ReactNode, useActionState } from "react";
+import type { ReactNode } from "react";
 import type { ButtonVariant } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { type ActionState, idleState } from "@/lib/action-state";
+import type { ApiEndpoint } from "@/lib/api-client";
+import { useApiForm } from "@/lib/use-api-form";
 
 /**
  * A single confirmation button for links received by email (activation,
  * unsubscribe): the action only runs on a click, never on page load.
  */
 export function ConfirmActionForm({
-  action,
+  endpoint,
   label,
   pendingLabel,
   icon,
@@ -19,7 +20,7 @@ export function ConfirmActionForm({
   successContent,
   errorContent,
 }: {
-  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  endpoint: ApiEndpoint;
   label: string;
   pendingLabel: string;
   icon?: ReactNode;
@@ -27,7 +28,7 @@ export function ConfirmActionForm({
   successContent?: ReactNode;
   errorContent?: ReactNode;
 }) {
-  const [state, formAction] = useActionState(action, idleState);
+  const [state, formAction] = useApiForm(endpoint);
 
   if (state.status !== "idle") {
     return (

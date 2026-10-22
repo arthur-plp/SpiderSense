@@ -1,13 +1,15 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useOptimistic, useTransition } from "react";
 import { cn } from "@/components/ui/cn";
-import { setOnDutyAction } from "@/lib/actions/incidents";
+import { apiRequest } from "@/lib/api-client";
 
 /** "En service / Hors service": off-duty heroes show as unavailable to citizens. */
 export function DutyToggle({ onDuty, busy }: { onDuty: boolean; busy: boolean }) {
   const [optimistic, setOptimistic] = useOptimistic(onDuty);
   const [, startTransition] = useTransition();
+  const router = useRouter();
   const label = busy ? "En intervention" : optimistic ? "En service" : "Hors service";
   return (
     <button
@@ -18,7 +20,8 @@ export function DutyToggle({ onDuty, busy }: { onDuty: boolean; busy: boolean })
       onClick={() =>
         startTransition(async () => {
           setOptimistic(!optimistic);
-          await setOnDutyAction(!optimistic);
+          await apiRequest("PUT", "/api/me/duty", { onDuty: !optimistic });
+          router.refresh();
         })
       }
       className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-200 hover:bg-white/5 disabled:cursor-default"

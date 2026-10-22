@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// French default messages, for fields without a custom one (e.g. missing in a JSON body).
+z.config(z.locales.fr());
+
 // Form fields arrive as strings; these helpers turn "" into null and trim.
 
 export const requiredText = (label: string, max = 255) =>
@@ -71,7 +74,8 @@ export const registerSchema = contactSchema
     email: emailSchema,
     password: passwordSchema,
     passwordConfirmation: z.string(),
-    acceptTerms: z.literal("on", { error: "Vous devez accepter le traitement de vos données." }),
+    // "on" from the form checkbox, "true" from a JSON client.
+    acceptTerms: z.enum(["on", "true"], { error: "Vous devez accepter le traitement de vos données." }),
   })
   .refine((data) => data.password === data.passwordConfirmation, {
     path: ["passwordConfirmation"],

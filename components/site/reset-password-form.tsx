@@ -2,16 +2,16 @@
 
 import { KeyRound } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
 import { Field, FormMessage } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { type ActionState, idleState } from "@/lib/action-state";
+import type { ApiEndpoint } from "@/lib/api-client";
+import { useApiForm } from "@/lib/use-api-form";
 import { authLinkClass } from "./auth-shell";
 import { PasswordInput } from "./password-input";
 
-/** New password form; `action` is `completePasswordReset` bound to the token. */
-export function ResetPasswordForm({ action }: { action: (state: ActionState, formData: FormData) => Promise<ActionState> }) {
-  const [state, formAction] = useActionState(action, idleState);
+/** New password form; `endpoint` carries the token of the link. */
+export function ResetPasswordForm({ endpoint }: { endpoint: ApiEndpoint }) {
+  const [state, formAction] = useApiForm(endpoint);
   const errors = state.fieldErrors ?? {};
   return (
     <form action={formAction} className="space-y-5" noValidate>

@@ -1,10 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
 import { Field, FormMessage, Input } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { updateContactAction } from "@/lib/actions/account";
+import { useApiForm } from "@/lib/use-api-form";
 
 export type ContactDefaults = {
   phone: string;
@@ -17,7 +15,7 @@ export type ContactDefaults = {
 
 /** The only editable profile fields (5.8.3 / 6.1.1): phone and postal address. */
 export function ContactForm({ defaults }: { defaults: ContactDefaults }) {
-  const [state, action] = useActionState(updateContactAction, idleState);
+  const [state, action] = useApiForm({ method: "PUT", path: "/api/me/contact" });
   const value = (name: keyof ContactDefaults) => state.values?.[name] ?? defaults[name] ?? "";
   const errors = state.fieldErrors ?? {};
   return (

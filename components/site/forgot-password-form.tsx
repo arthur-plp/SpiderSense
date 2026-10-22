@@ -2,18 +2,16 @@
 
 import { ArrowLeft, Inbox, Send } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
 import { LinkButton } from "@/components/ui/button";
 import { Field, FormMessage, Input } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { requestPasswordReset } from "@/lib/actions/auth";
+import { useApiForm } from "@/lib/use-api-form";
 import { authLinkClass } from "./auth-shell";
 import { Notice } from "./notice";
 
 /** Forgot password (5.3): only an email; same answer whether the account exists or not. */
 export function ForgotPasswordForm({ mailboxHref }: { mailboxHref: string | null }) {
-  const [state, formAction] = useActionState(requestPasswordReset, idleState);
+  const [state, formAction] = useApiForm({ method: "POST", path: "/api/auth/forgot-password" });
 
   if (state.status === "success") {
     return (

@@ -2,11 +2,9 @@
 
 import { Inbox, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
 import { Field, FormMessage, Input } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { resendActivation } from "@/lib/actions/auth";
+import { useApiForm } from "@/lib/use-api-form";
 
 /**
  * Sends a new activation link. With `hiddenEmail`, only the button shows
@@ -21,7 +19,7 @@ export function ResendActivationForm({
   hiddenEmail?: boolean;
   mailboxHref?: string | null;
 }) {
-  const [state, formAction] = useActionState(resendActivation, idleState);
+  const [state, formAction] = useApiForm({ method: "POST", path: "/api/auth/resend-activation" });
   return (
     <form action={formAction} className="space-y-3">
       {hiddenEmail && email ? (

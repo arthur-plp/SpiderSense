@@ -5,7 +5,6 @@ import { AuthShell } from "@/components/site/auth-shell";
 import { ConfirmActionForm } from "@/components/site/confirm-action-form";
 import { FormSkeleton } from "@/components/site/skeleton";
 import { LinkButton } from "@/components/ui/button";
-import { confirmUnsubscribe } from "@/lib/actions/newsletter";
 
 export const metadata: Metadata = { title: "Désinscription de la newsletter", robots: { index: false } };
 
@@ -33,7 +32,7 @@ async function UnsubscribeContent({ params }: Pick<PageProps<"/newsletter/desins
   );
   return (
     <ConfirmActionForm
-      action={confirmUnsubscribe.bind(null, token)}
+      endpoint={{ method: "POST", path: "/api/newsletter/unsubscribe", body: { token } }}
       label="Confirmer la désinscription"
       pendingLabel="Désinscription…"
       variant="danger"
