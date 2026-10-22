@@ -20,7 +20,7 @@ export function DutyToggle({ onDuty, busy }: { onDuty: boolean; busy: boolean })
       onClick={() =>
         startTransition(async () => {
           setOptimistic(!optimistic);
-          await apiRequest("PUT", "/api/me/duty", { onDuty: !optimistic });
+          await apiRequest("PUT", "/api/me/duty", { onDuty: !optimistic }, { offline: "Disponibilité" });
           router.refresh();
         })
       }

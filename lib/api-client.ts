@@ -8,7 +8,9 @@ export type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type FieldErrors = Record<string, string[] | undefined>;
 
 export type ApiResult<T = Record<string, unknown>> =
-  | { ok: true; status: number; data: T & { message?: string } }
+  | { ok: true; status: number; data: T & { message?: string }; queued?: false }
+  /** Offline: the action waits on the device and will be sent when the network is back. */
+  | { ok: true; status: 202; data: { message: string }; queued: true }
   | { ok: false; status: number; error: string; fieldErrors?: FieldErrors; data: Record<string, unknown> };
 
 /**
@@ -26,23 +28,51 @@ export type ApiEndpoint = {
   redirectTo?: string;
   /** Full page load after a success (sign-in / sign-out change every layout). */
   fullReload?: boolean;
+  /** Without network, queue the action (label shown while it waits) instead of failing. */
+  offline?: string;
 };
 
-/** Calls the API with a JSON (or multipart, for files) body. Never throws. */
+/**
+ * Calls the API with a JSON (or multipart, for files) body. Never throws.
+ * With `offline` (a label), a JSON mutation that can't reach the server is
+ * queued on the device with its idempotency key, and replayed later.
+ */
 export async function apiRequest<T = Record<string, unknown>>(
   method: ApiMethod,
   path: string,
   body?: Record<string, unknown> | FormData,
+  options: { offline?: string } = {},
 ): Promise<ApiResult<T>> {
+  const queueable = Boolean(options.offline) && method !== "GET" && !(body instanceof FormData);
+  // Same key online and offline: if the answer is lost, the replay won't apply it twice.
+  const key = queueable ? crypto.randomUUID() : null;
+  const queue = async (): Promise<ApiResult<T>> => {
+    const { enqueue } = await import("./offline/outbox");
+    await enqueue({
+      id: key!,
+      method: method as Exclude<ApiMethod, "GET">,
+      path,
+      body: body as Record<string, unknown> | undefined,
+      label: options.offline!,
+      createdAt: new Date().toISOString(),
+    });
+    return { ok: true, status: 202, queued: true, data: { message: "Hors ligne : l'action sera envoyée dès le retour du réseau." } };
+  };
+  if (queueable && typeof navigator !== "undefined" && !navigator.onLine) return queue();
+
   let response: Response;
   try {
     response = await fetch(path, {
       method,
       credentials: "same-origin",
-      headers: body && !(body instanceof FormData) ? { "content-type": "application/json" } : undefined,
+      headers: {
+        ...(body && !(body instanceof FormData) ? { "content-type": "application/json" } : {}),
+        ...(key ? { "idempotency-key": key } : {}),
+      },
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
     });
   } catch {
+    if (queueable) return queue();
     return { ok: false, status: 0, error: "Connexion impossible. Vérifiez votre réseau et réessayez.", data: {} };
   }
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
@@ -103,7 +133,7 @@ export async function submitEndpoint(
           return multipart;
         })()
       : { ...(formData ? formDataToBody(formData) : {}), ...endpoint.body };
-  const result = await apiRequest(endpoint.method, endpoint.path, body);
+  const result = await apiRequest(endpoint.method, endpoint.path, body, { offline: endpoint.offline });
   if (result.ok) {
     return { result, state: { status: "success", message: result.data.message ?? endpoint.successMessage } };
   }

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { OfflineSync } from "@/components/ui/offline-sync";
 
 export const metadata: Metadata = {
   title: { default: "Espace citoyen", template: "%s · Spider Sense" },
@@ -16,6 +17,7 @@ export default function CitizenLayout({ children }: LayoutProps<"/citoyen">) {
     <div className="flex min-h-dvh justify-center bg-[radial-gradient(60%_50%_at_50%_0%,rgb(30_64_125/0.3),transparent),#020309]">
       <div className="relative min-h-dvh w-full max-w-[430px] overflow-x-clip bg-ink-950 sm:border-x sm:border-white/5 sm:shadow-[0_0_80px_rgb(0_0_0/0.7)]">
         {children}
+        <OfflineSync className="top-20" />
       </div>
     </div>
   );

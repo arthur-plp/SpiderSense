@@ -13,7 +13,12 @@ const noop = () => () => {};
 
 /** Detailed declaration form (6.1.2): type, when, who, what, where. */
 export function DeclareForm({ types }: { types: IncidentTypeOption[] }) {
-  const [state, action] = useApiForm({ method: "POST", path: "/api/incidents", redirectTo: "/citoyen/incidents/{id}?nouveau=1" });
+  const [state, action] = useApiForm({
+    method: "POST",
+    path: "/api/incidents",
+    redirectTo: "/citoyen/incidents/{id}?nouveau=1",
+    offline: "Signalement d'incident",
+  });
   const [now, setNow] = useState(true);
   const errors = state.fieldErrors ?? {};
   const values = state.values ?? {};

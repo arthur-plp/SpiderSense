@@ -60,7 +60,7 @@ export function IncidentDetail({
     if (!mine) return;
     let cancelled = false;
     apiRequest<{ contact: { firstName: string; phone: string } }>("GET", `/api/incidents/${incident.id}/reporter-contact`).then((result) => {
-      if (!cancelled && result.ok) setContact({ incidentId: incident.id, ...result.data.contact });
+      if (!cancelled && result.ok && !result.queued) setContact({ incidentId: incident.id, ...result.data.contact });
     });
     return () => {
       cancelled = true;

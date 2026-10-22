@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleCheck, LoaderCircle, MapPin, Minus, Plus, TriangleAlert, X } from "lucide-react";
+import { CircleCheck, LoaderCircle, MapPin, Minus, Plus, TriangleAlert, WifiOff, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -29,7 +29,12 @@ type SosDialogProps = {
 type SosSent = { incidentId: string; heroesAvailable: number };
 type Nearby = IncidentDto & { distance: number };
 
-type Step = { name: "form" } | { name: "sending" } | { name: "sent"; result: SosSent } | { name: "error"; message: string };
+type Step =
+  | { name: "form" }
+  | { name: "sending" }
+  | { name: "sent"; result: SosSent }
+  | { name: "queued" }
+  | { name: "error"; message: string };
 
 /** Confirmation step of the buzzer: what, how many people, where — then send. */
 export function SosDialog({ open, onClose, onSent, types, position, precise, fallbackAddress }: SosDialogProps) {
@@ -53,7 +58,7 @@ export function SosDialog({ open, onClose, onSent, types, position, precise, fal
       .then((body) => !cancelled && setAddress(body.address))
       .catch(() => undefined);
     apiRequest<{ incidents: Nearby[] }>("GET", `/api/incidents/nearby?lat=${position.lat}&lng=${position.lng}`).then(
-      (result) => !cancelled && result.ok && setNearby(result.data.incidents),
+      (result) => !cancelled && result.ok && !result.queued && setNearby(result.data.incidents),
     );
     return () => {
       cancelled = true;
@@ -94,8 +99,13 @@ export function SosDialog({ open, onClose, onSent, types, position, precise, fal
     data.set("postalCode", where.postalCode ?? "");
     data.set("city", where.city ?? "");
     data.set("country", where.country ?? "France");
-    const result = await apiRequest<{ id: string; heroesAvailable: number }>("POST", "/api/incidents", formDataToBody(data));
-    if (result.ok) {
+    const result = await apiRequest<{ id: string; heroesAvailable: number }>("POST", "/api/incidents", formDataToBody(data), {
+      offline: `Alerte SOS : ${selectedType.label}`,
+    });
+    if (result.ok && result.queued) {
+      navigator.vibrate?.([80, 40, 80]);
+      setStep({ name: "queued" });
+    } else if (result.ok) {
       navigator.vibrate?.([80, 40, 80]);
       setStep({ name: "sent", result: { incidentId: result.data.id, heroesAvailable: result.data.heroesAvailable } });
       onSent(result.data.id);
@@ -128,7 +138,22 @@ export function SosDialog({ open, onClose, onSent, types, position, precise, fal
         aria-labelledby="sos-title"
         className="glass glass-strong max-h-[92%] w-full overflow-y-auto rounded-t-[28px] p-5 pb-8 animate-slide-up"
       >
-        {step.name === "sent" ? (
+        {step.name === "queued" ? (
+          <div className="flex flex-col items-center py-4 text-center">
+            <span className="flex size-20 items-center justify-center rounded-full bg-amber-300/15 text-amber-200 ring-1 ring-amber-200/40">
+              <WifiOff className="size-10" aria-hidden />
+            </span>
+            <h2 id="sos-title" className="mt-4 text-xl font-bold text-white">Alerte enregistrée</h2>
+            <p className="mt-2 text-sm text-slate-300">
+              Pas de réseau pour le moment : votre alerte est gardée sur le téléphone et partira automatiquement dès le retour
+              de la connexion, avec l&apos;heure à laquelle vous l&apos;avez lancée.
+            </p>
+            <p className="mt-1 text-xs text-slate-500">En cas d&apos;urgence vitale, appelez le 112 : les appels d&apos;urgence passent même sans réseau mobile.</p>
+            <Button variant="ghost" className="mt-6 w-full" onClick={close} data-autofocus>
+              Fermer
+            </Button>
+          </div>
+        ) : step.name === "sent" ? (
           <div className="flex flex-col items-center py-4 text-center">
             <span className="flex size-20 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/40">
               <CircleCheck className="size-11" aria-hidden />

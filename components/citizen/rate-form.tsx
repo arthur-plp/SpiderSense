@@ -7,7 +7,7 @@ import { useApiForm } from "@/lib/use-api-form";
 
 /** Satisfaction form (6.1.3): rating out of 5 and an optional comment. */
 export function RateForm({ incidentId, heroAlias }: { incidentId: string; heroAlias: string }) {
-  const [state, action] = useApiForm({ method: "POST", path: `/api/incidents/${incidentId}/review` });
+  const [state, action] = useApiForm({ method: "POST", path: `/api/incidents/${incidentId}/review`, offline: "Note de l'intervention" });
   if (state.status === "success") return <FormMessage state={state} />;
   return (
     <form action={action} className="flex flex-col gap-3">

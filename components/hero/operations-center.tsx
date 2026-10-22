@@ -55,8 +55,13 @@ type HeroMarker = MapMarker & { kind: "hero"; hero: HeroDto; isMe: boolean };
  * markers and as liquid-glass cards. Card ↔ marker selection is synced.
  */
 export function OperationsCenter({ hero, initialIncidents, initialHeroes, villains, initialSelectedId }: OperationsCenterProps) {
-  const incidentsFeed = useLiveResource("/api/incidents", initialIncidents, (body) => (body as { incidents: IncidentDto[] }).incidents);
-  const heroesFeed = useLiveResource("/api/heroes", initialHeroes, (body) => (body as { heroes: HeroDto[] }).heroes, 20_000);
+  const incidentsFeed = useLiveResource("/api/incidents", initialIncidents, (body) => (body as { incidents: IncidentDto[] }).incidents, {
+    live: ["incident"],
+  });
+  const heroesFeed = useLiveResource("/api/heroes", initialHeroes, (body) => (body as { heroes: HeroDto[] }).heroes, {
+    intervalMs: 20_000,
+    live: ["hero", "incident"],
+  });
   const incidents = incidentsFeed.data;
 
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
@@ -182,10 +187,12 @@ export function OperationsCenter({ hero, initialIncidents, initialHeroes, villai
     return [...heroMarkers, ...incidentMarkers];
   }, [incidents, heroesFeed.data, filter, selectedId, hero.id, position]);
 
-  const run = (task: () => Promise<{ ok: boolean; error?: string }>, success: string) =>
+  const run = (task: () => Promise<{ ok: boolean; error?: string; queued?: boolean }>, success: string) =>
     startTransition(async () => {
       const result = await task();
-      if (result.ok) {
+      if (result.ok && result.queued) {
+        push({ tone: "info", title: `${success} (hors ligne)`, description: "Envoyé automatiquement dès le retour du réseau." });
+      } else if (result.ok) {
         push({ tone: "success", title: success });
         await incidentsFeed.reload();
         void heroesFeed.reload();
@@ -197,19 +204,24 @@ export function OperationsCenter({ hero, initialIncidents, initialHeroes, villai
 
   const take = (incident: IncidentDto) => {
     select(incident.id, { fly: true });
-    run(() => apiRequest("POST", `/api/incidents/${incident.id}/intervention`), `Intervention démarrée : ${incident.typeLabel} à ${incident.city}`);
+    run(() => apiRequest("POST", `/api/incidents/${incident.id}/intervention`, undefined, { offline: `Prise en charge : ${incident.typeLabel}` }), `Intervention démarrée : ${incident.typeLabel} à ${incident.city}`);
   };
 
   const prioritize = (incident: IncidentDto, priority: IncidentPriority) => {
     // Optimistic: the badge changes immediately, the poll confirms it.
     incidentsFeed.setData((all) => all.map((item) => (item.id === incident.id ? { ...item, priority } : item)));
-    run(() => apiRequest("PATCH", `/api/incidents/${incident.id}/priority`, { priority }), "Priorité mise à jour");
+    run(() => apiRequest("PATCH", `/api/incidents/${incident.id}/priority`, { priority }, { offline: "Priorité" }), "Priorité mise à jour");
   };
 
   const finish = (incident: IncidentDto, report: InterventionReport) =>
     startTransition(async () => {
-      const result = await apiRequest("POST", `/api/incidents/${incident.id}/intervention/close`, report);
-      if (result.ok) {
+      const result = await apiRequest("POST", `/api/incidents/${incident.id}/intervention/close`, report, {
+        offline: `Clôture : ${incident.typeLabel}`,
+      });
+      if (result.ok && result.queued) {
+        setFinishingId(null);
+        push({ tone: "info", title: "Clôture enregistrée hors ligne", description: "Envoyée automatiquement dès le retour du réseau." });
+      } else if (result.ok) {
         setFinishingId(null);
         // The server moved the hero to where the intervention ended.
         if (incident.latitude !== null && incident.longitude !== null) {
@@ -235,7 +247,7 @@ export function OperationsCenter({ hero, initialIncidents, initialHeroes, villai
         setPosition(next);
         setFocus({ ...next, zoom: 14, key: `me-${Date.now()}` });
         startTransition(async () => {
-          const saved = await apiRequest("PUT", "/api/me/location", next);
+          const saved = await apiRequest("PUT", "/api/me/location", next, { offline: "Position" });
           push(saved.ok ? { tone: "success", title: "Position mise à jour" } : { tone: "error", title: "Position refusée", description: saved.error });
         });
       },
@@ -290,13 +302,16 @@ export function OperationsCenter({ hero, initialIncidents, initialHeroes, villai
             <p className="flex items-center gap-1.5 text-xs text-slate-400" aria-live="polite">
               <Radio className={cn("size-3.5", incidentsFeed.online ? "text-emerald-400" : "text-rose-400")} aria-hidden />
               {incidentsFeed.online ? (
-                incidentsFeed.updatedAt ? (
-                  <>
-                    En direct · <RelativeTime value={new Date(incidentsFeed.updatedAt).toISOString()} />
-                  </>
-                ) : (
-                  "En direct"
-                )
+                <>
+                  {/* Live feed (SSE) connected, or polling only. */}
+                  {incidentsFeed.live ? "Temps réel" : "Actualisation auto"}
+                  {incidentsFeed.updatedAt && (
+                    <>
+                      {" · "}
+                      <RelativeTime value={new Date(incidentsFeed.updatedAt).toISOString()} />
+                    </>
+                  )}
+                </>
               ) : (
                 "Hors ligne"
               )}

@@ -16,7 +16,8 @@ export function useApiForm(
   const router = useRouter();
   return useActionState(async (_: ActionState, formData: FormData): Promise<ActionState> => {
     const { state, result } = await submitEndpoint(endpoint, formData);
-    if (result.ok) {
+    // Queued offline: nothing to open or refresh yet, the banner tracks it.
+    if (result.ok && !result.queued) {
       onSuccess?.(result.data);
       const target = endpoint.redirectTo ? fillPath(endpoint.redirectTo, result.data) : null;
       if (endpoint.fullReload) window.location.assign(target ?? window.location.href);

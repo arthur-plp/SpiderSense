@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError, apiUser, fieldError, parse, readFormBody, route } from "@/lib/server/api";
+import { actionTime } from "@/lib/server/request-context";
 import {
   countHeroesOnDuty,
   createIncident,
@@ -42,6 +43,8 @@ export const POST = route(async (request) => {
   const user = await apiUser();
   const body = await readFormBody(request);
   const input = parse(incidentSchema, body);
+  // No date typed: it happened when the citizen sent it (the device clock for an offline replay).
+  if (!body.occurredAt) input.occurredAt = actionTime();
   const { priority } = parse(prioritySchemaAtCreation, body);
   if (priority && !user.isStaff) throw new ApiError(403, "Seuls les modérateurs fixent la priorité à la création.");
   if (!(await listIncidentTypes()).some((type) => type.id === input.typeId)) {
