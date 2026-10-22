@@ -76,6 +76,9 @@ PostgreSQL est exposé sur le port **5433** de la machine (et non 5432) pour ne 
 | `SEED_DEMO_DATA` | `true` / `false` : force ou empêche le chargement des données de démo au démarrage (par défaut : seulement avec PGlite) |
 | `DB_MIGRATE_ON_START` | `true` : applique les migrations au démarrage (PostgreSQL) |
 | `ENABLE_MAIL_PREVIEW` | `true` : garde `/dev/mails` en production (déconseillé : la page montre les liens d'activation) |
+| `LOGSTASH_URL` | Envoie les logs à Logstash (`http://localhost:8090`), voir [Monitoring](./monitoring) |
+| `LOG_FORMAT` | `json` : écrit aussi les logs structurés sur la sortie standard |
+| `NEXT_PUBLIC_ENABLE_SW` | `true` : active le service worker en développement (il l'est toujours en production) |
 
 Le fichier `.env` n'est jamais commité ; `.env.example` sert de modèle.
 
@@ -90,6 +93,11 @@ Le fichier `.env` n'est jamais commité ; `.env.example` sert de modèle.
 | `npm run db:migrate` | Applique les migrations en attente |
 | `npm run db:seed` | Charge les données de démo (seulement si la base n'a aucun utilisateur) |
 | `npm run db:studio` | Ouvre Drizzle Studio (**développement uniquement**) |
+| `npm run db:load` | Jeu de charge : 50 000 citoyens et 5 M d'incidents, voir [Performances](./performance) |
+| `npm run bench` / `npm run explain` | Mesure les temps de réponse / les plans d'exécution |
+| `npm run events:rebuild` | Reconstruit les projections en rejouant le journal, puis les vérifie |
+| `npm run elk:setup` | Prépare Elasticsearch et Kibana (après `docker compose --profile elk up -d`) |
+| `npm run demo:traffic` | Activité simulée pour une démonstration |
 
 :::warning RGPD
 Le cahier des charges interdit tout outil d'accès direct aux données en production. Drizzle Studio et l'accès `psql` sont réservés au développement.

@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Spider Sense API",
-    "version": "1.0.0",
-    "description": "API REST de la plateforme Spider Sense. **L'application l'utilise elle-même** : chaque formulaire et chaque bouton appelle un de ces endpoints.\n\n**Authentification** : `POST /api/auth/login` pose un cookie de session `spidersense_session` (HttpOnly, SameSite=Lax, 30 jours). Dans Swagger, connectez-vous avec cette route (bouton *Try it out*) : les appels suivants sont authentifiés. Comptes de démo : `citoyen@spider-sense.test`, `Spider-Man`, `moderateur@spider-sense.test`, `admin@spider-sense.test`, mot de passe `Demo1234!`.\n\n**Corps** : JSON (`multipart/form-data` pour l'avatar). Les nombres peuvent aussi être envoyés en chaîne ; un champ facultatif vide ou `null` est ignoré.\n\n**Erreurs** : `{ \"error\": \"message\" }`, plus `fieldErrors` (un tableau de messages par champ) pour les erreurs de validation. Les messages sont en français, affichables tels quels.\n\n**CSRF** : une requête `POST`/`PUT`/`PATCH`/`DELETE` dont l'en-tête `Origin` désigne un autre site est refusée (403)."
+    "version": "1.1.0",
+    "description": "API REST de la plateforme Spider Sense. **L'application l'utilise elle-même** : chaque formulaire et chaque bouton appelle un de ces endpoints.\n\n**Authentification** : `POST /api/auth/login` pose un cookie de session `spidersense_session` (HttpOnly, SameSite=Lax, 30 jours). Dans Swagger, connectez-vous avec cette route (bouton *Try it out*) : les appels suivants sont authentifiés. Comptes de démo : `citoyen@spider-sense.test`, `Spider-Man`, `moderateur@spider-sense.test`, `admin@spider-sense.test`, mot de passe `Demo1234!`.\n\n**Corps** : JSON (`multipart/form-data` pour l'avatar). Les nombres peuvent aussi être envoyés en chaîne ; un champ facultatif vide ou `null` est ignoré.\n\n**Erreurs** : `{ \"error\": \"message\" }`, plus `fieldErrors` (un tableau de messages par champ) pour les erreurs de validation. Les messages sont en français, affichables tels quels.\n\n**Hors ligne** : les mutations acceptent `Idempotency-Key`, `X-Offline-Replay` et `X-Client-Time` : une action faite sans réseau est rejouée plus tard sans être appliquée deux fois, avec son heure réelle.\n\n**CSRF** : une requête `POST`/`PUT`/`PATCH`/`DELETE` dont l'en-tête `Origin` désigne un autre site est refusée (403)."
   },
   "servers": [
     {
@@ -487,8 +487,25 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       },
       "delete": {
         "operationId": "removeAvatar",
@@ -503,8 +520,25 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/me/contact": {
@@ -544,8 +578,25 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/me/email-change": {
@@ -604,8 +655,22 @@
                 }
               }
             }
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       },
       "delete": {
         "operationId": "cancelEmailChange",
@@ -620,8 +685,25 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/me/hero-application": {
@@ -674,8 +756,22 @@
                 }
               }
             }
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/me/newsletter": {
@@ -702,8 +798,25 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       },
       "patch": {
         "operationId": "setNewsletterEnabled",
@@ -749,8 +862,25 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       },
       "delete": {
         "operationId": "unsubscribeMe",
@@ -765,8 +895,25 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/me/password": {
@@ -806,8 +953,25 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/me/duty": {
@@ -863,8 +1027,25 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/me/hero-profile": {
@@ -907,8 +1088,25 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/me/location": {
@@ -978,8 +1176,25 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/me/movies": {
@@ -1058,8 +1273,22 @@
                 }
               }
             }
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/me/movies/{movieId}": {
@@ -1080,6 +1309,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "responses": {
@@ -1097,6 +1335,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -1119,6 +1363,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -1176,6 +1429,12 @@
                 }
               }
             }
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -1227,7 +1486,7 @@
           "Incidents"
         ],
         "summary": "Signaler un incident",
-        "description": "Formulaire détaillé ou bouton SOS. Les super-héros en service et les modérateurs sont prévenus par email. Un modérateur peut fixer la priorité dès la création.\n\nAccès : Utilisateur connecté.",
+        "description": "Formulaire détaillé ou bouton SOS. Sans `occurredAt`, l'incident date de l'action (`X-Client-Time` pour un rejeu hors ligne). Les super-héros en service et les modérateurs sont prévenus par email. Un modérateur peut fixer la priorité dès la création.\n\nAccès : Utilisateur connecté.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1267,8 +1526,25 @@
                 }
               }
             }
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/incidents/nearby": {
@@ -1401,6 +1677,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -1446,6 +1731,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       },
@@ -1466,6 +1757,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -1503,6 +1803,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -1525,6 +1831,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "responses": {
@@ -1562,6 +1877,9 @@
                 }
               }
             }
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -1584,6 +1902,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -1631,6 +1958,9 @@
                 }
               }
             }
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -1653,6 +1983,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -1710,6 +2049,12 @@
                 }
               }
             }
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -1808,6 +2153,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -1863,6 +2217,12 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -1885,6 +2245,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "responses": {
@@ -1937,6 +2306,72 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
+          }
+        }
+      }
+    },
+    "/api/events/stream": {
+      "get": {
+        "operationId": "streamEvents",
+        "tags": [
+          "Temps réel"
+        ],
+        "summary": "Flux temps réel du journal (Server-Sent Events)",
+        "description": "Connexion `text/event-stream` qui reste ouverte : un message `change` par événement ajouté au journal (PostgreSQL `LISTEN/NOTIFY`). Il indique seulement ce qui a changé ; les cartes rechargent ensuite `/api/incidents` ou `/api/heroes`, qui appliquent les droits d'accès. Un commentaire `: ping` toutes les 25 s garde la connexion ouverte.\n\n```\nevent: change\nid: 5001076\ndata: {\"sequence\":5001076,\"type\":\"IncidentReported\",\"aggregateType\":\"incident\",\"aggregateId\":\"d23e…\",\"occurredAt\":\"2026-10-22T14:45:31.561Z\",\"source\":\"online\"}\n```\n\nSwagger ne sait pas afficher un flux : testez avec `curl -N -b cookies.txt http://localhost:3000/api/events/stream`.\n\nAccès : Utilisateur connecté.",
+        "responses": {
+          "200": {
+            "description": "Flux d'événements (`ready` à la connexion, puis `change`)",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "object",
+                  "description": "Contenu `data` d'un message `change`",
+                  "properties": {
+                    "sequence": {
+                      "type": "integer"
+                    },
+                    "type": {
+                      "type": "string",
+                      "example": "IncidentReported"
+                    },
+                    "aggregateType": {
+                      "type": "string",
+                      "enum": [
+                        "incident",
+                        "hero"
+                      ]
+                    },
+                    "aggregateId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "occurredAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "online",
+                        "offline",
+                        "seed",
+                        "load",
+                        "migration"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
           }
         }
       }
@@ -2307,8 +2742,25 @@
           },
           "400": {
             "$ref": "#/components/responses/ValidationError"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/newsletter/unsubscribe": {
@@ -2356,8 +2808,25 @@
                 }
               }
             }
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/admin/articles": {
@@ -2407,8 +2876,22 @@
                 }
               }
             }
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/admin/articles/{id}": {
@@ -2429,6 +2912,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -2473,6 +2965,9 @@
                 }
               }
             }
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       },
@@ -2493,6 +2988,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "responses": {
@@ -2520,6 +3024,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -2542,6 +3052,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -2584,6 +3103,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -2606,6 +3131,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -2648,6 +3182,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -2680,6 +3220,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -2722,6 +3271,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -2775,8 +3330,25 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/admin/reviews/{reviewId}": {
@@ -2797,6 +3369,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -2847,6 +3428,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -2869,6 +3456,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -2916,6 +3512,12 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -2938,6 +3540,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -2985,6 +3596,12 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -3007,6 +3624,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "responses": {
@@ -3041,6 +3667,12 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -3105,8 +3737,22 @@
                 }
               }
             }
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
+          }
+        ]
       }
     },
     "/api/admin/villains/{id}": {
@@ -3127,6 +3773,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "requestBody": {
@@ -3184,6 +3839,9 @@
                 }
               }
             }
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       },
@@ -3204,6 +3862,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/OfflineReplay"
+          },
+          {
+            "$ref": "#/components/parameters/ClientTime"
           }
         ],
         "responses": {
@@ -3231,6 +3898,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyInProgress"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyMismatch"
           }
         }
       }
@@ -3299,6 +3972,40 @@
             },
             "example": {
               "error": "Ressource introuvable."
+            }
+          }
+        }
+      },
+      "IdempotencyInProgress": {
+        "description": "Une requête avec la même `Idempotency-Key` est encore en cours : réessayer (`Retry-After`)",
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "integer",
+              "example": 2
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Cette action est déjà en cours de traitement."
+            }
+          }
+        }
+      },
+      "IdempotencyMismatch": {
+        "description": "Cette `Idempotency-Key` a déjà servi pour une autre route ou un autre compte",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Cette clé d'idempotence a déjà servi pour une autre requête."
             }
           }
         }
@@ -4554,6 +5261,40 @@
             "format": "uuid",
             "description": "Obligatoire avec `target: ONE`"
           }
+        }
+      }
+    },
+    "parameters": {
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": false,
+        "description": "UUID choisi par le client. Rejouée avec la même clé, la requête n'est pas exécutée une seconde fois : la réponse enregistrée est renvoyée, avec l'en-tête `Idempotent-Replayed: true`. Utilisée par l'app pour les actions faites hors ligne.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "OfflineReplay": {
+        "name": "X-Offline-Replay",
+        "in": "header",
+        "required": false,
+        "description": "`1` : action faite hors ligne, rejouée au retour du réseau (événement `source: offline`).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "1"
+          ]
+        }
+      },
+      "ClientTime": {
+        "name": "X-Client-Time",
+        "in": "header",
+        "required": false,
+        "description": "Heure de l'action sur l'appareil (ISO 8601). Devient l'heure de l'événement (`occurred_at`), de l'incident s'il n'en a pas, ou du début / de la fin d'intervention. Ignorée si elle est dans le futur ou date de plus de 7 jours.",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     }

@@ -67,6 +67,20 @@ Mot de passe commun : **`Demo1234!`**
 | `npm run db:migrate` | Applique les migrations en attente |
 | `npm run db:seed` | Charge les données de démo (seulement si la base n'a aucun utilisateur) |
 | `npm run db:studio` | Drizzle Studio (développement uniquement) |
+| `npm run db:load` | Jeu de charge : 50 000 citoyens et 5 millions d'incidents (~12 min) |
+| `npm run bench` / `npm run explain` | Temps de réponse des pages et routes / plans d'exécution des requêtes |
+| `npm run events:rebuild` | Reconstruit les statistiques en rejouant le journal d'événements, puis les vérifie |
+| `npm run elk:setup` | Prépare Elasticsearch et Kibana (après `docker compose --profile elk up -d`) |
+| `npm run demo:traffic` | Activité simulée (signalements, interventions) pour une démonstration |
+
+## Performances, hors ligne, temps réel, monitoring
+
+- **5 millions d'incidents sous 350 ms** : projections tenues à jour par un journal d'événements, index ciblés. Les mesures avant / après sont dans `bench/`.
+- **Hors ligne** : l'app citoyen et le centre d'opérations s'ouvrent sans réseau (service worker, en production). Les actions attendent sur l'appareil, puis partent au retour du réseau une seule fois, avec leur heure réelle.
+- **Temps réel** : les cartes se mettent à jour dès qu'un incident change (Server-Sent Events).
+- **Monitoring ELK** : `docker compose --profile elk up -d && npm run elk:setup`, `LOGSTASH_URL=http://localhost:8090` dans `.env`, puis le tableau de bord sur http://localhost:5601.
+
+Détails et scénario de démonstration : la documentation Docusaurus (`npm run docs`), section Backend.
 
 ## Repartir d'une base vide
 

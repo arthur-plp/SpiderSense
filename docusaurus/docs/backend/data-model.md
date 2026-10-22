@@ -51,6 +51,17 @@ REPORTED ──(un héros intervient)──▶ IN_PROGRESS ──▶ SUCCEEDED
 
 La priorité (`HIGH` / `NORMAL` / `LOW`) reste vide tant qu'un modérateur ou un héros ne l'a pas fixée. La suppression est « douce » (`deleted_at`) pour pouvoir prévenir le citoyen, par exemple en cas de doublon.
 
+### Journal d'événements et projections
+
+Voir [Journal d'événements](./event-sourcing).
+
+| Table | Contenu |
+|---|---|
+| `domain_events` | Journal immuable : un événement par changement d'un incident ou de la présence d'un héros, avec les instantanés avant / après |
+| `incident_counts` | Projection : incidents et personnes par statut × type × priorité × supprimé |
+| `hero_stats`, `hero_villain_stats`, `villain_stats` | Projections : statistiques par héros, par héros × vilain, par vilain |
+| `idempotency_keys` | Réponses des requêtes envoyées avec une `Idempotency-Key` (actions rejouées après une coupure réseau) |
+
 ### Vidéothèque, newsletter, blog
 
 | Table | Contenu |
@@ -77,15 +88,16 @@ Ces règles sont des contraintes PostgreSQL : elles tiennent même si le code ap
 
 ## Statistiques
 
-Les statistiques de l'espace professionnel ne sont pas stockées : elles sont calculées à la demande.
+Les statistiques liées aux incidents sont lues dans les **projections**, tenues à jour par le journal d'événements : elles ne parcourent jamais les millions d'incidents (voir [Performances](./performance)).
 
 | Statistique | Calcul |
 |---|---|
-| Citoyens secourus | Somme de `people_involved` des incidents `SUCCEEDED` |
+| Citoyens secourus | `incident_counts.people_involved` des lignes `SUCCEEDED` |
 | Citoyens en danger secourus | Idem, limité aux types où `endangers_citizens` est vrai |
 | Vilains identifiés / emprisonnés | Nombre de `villains` / ceux au statut `IMPRISONED` |
+| Interventions, réussites, citoyens secourus d'un héros | `hero_stats` |
+| Vilains emprisonnés par un héros, pire ennemi | `hero_villain_stats` (emprisonnements > 0, rencontres maximales) |
 | Note d'un héros | Moyenne des `hero_reviews` visibles |
-| Pire ennemi | Vilain le plus fréquent dans les interventions du héros |
 | Films d'un héros | `hero_movies` au statut `APPROVED` |
 
 ## Faire évoluer le schéma

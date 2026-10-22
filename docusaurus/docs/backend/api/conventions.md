@@ -87,6 +87,22 @@ Tous les messages sont en français, affichables tels quels. Les messages par d�
 
 Certaines routes répondent la même chose que le compte existe ou non (`forgot-password`, `resend-activation`, abonnement à la newsletter) : on ne peut pas s'en servir pour savoir quels emails ont un compte.
 
+## Hors ligne : idempotence et heure de l'action
+
+Les mutations acceptent trois en-têtes, envoyés par l'app quand elle rejoue une action faite sans réseau (voir [Temps réel et hors ligne](../realtime-offline)) :
+
+| En-tête | Effet |
+|---|---|
+| `Idempotency-Key: <uuid>` | La requête n'est exécutée qu'une fois : rejouée avec la même clé, elle renvoie la réponse enregistrée avec `Idempotent-Replayed: true`. `409` (+ `Retry-After`) si la première est encore en cours, `422` si la clé a servi ailleurs |
+| `X-Offline-Replay: 1` | L'événement du journal est marqué `source: offline` |
+| `X-Client-Time: <ISO 8601>` | Heure de l'action sur l'appareil : heure de l'événement, de l'incident, du début / de la fin d'intervention |
+
+Le service lit l'heure de l'action avec `actionTime()` (`lib/server/request-context.ts`) plutôt que `new Date()`.
+
+## Logs
+
+`route()` journalise chaque requête (route, statut, durée, rôle) et chaque événement ajouté au journal, vers ELK quand `LOGSTASH_URL` est défini. Voir [Monitoring](../monitoring).
+
 ## Mails
 
 Les mails partent **après** la réponse (`after()` de Next.js, dans `lib/server/mail/index.ts`) : une route n'attend jamais le serveur SMTP. Une erreur d'envoi est seulement journalisée. Voir [Mails](../mails).
@@ -113,7 +129,7 @@ export const PATCH = route(async (request, { params }: RouteContext<"/api/exempl
 
 | Helper (`lib/server/api.ts`) | Rôle |
 |---|---|
-| `route(handler)` | Vérifie l'origine (CSRF), transforme une `ApiError` en réponse JSON, toute autre exception en `500` |
+| `route(handler)` | Vérifie l'origine (CSRF), gère l'idempotence, transforme une `ApiError` en réponse JSON, toute autre exception en `500`, journalise la requête |
 | `readBody(request)` | Corps JSON, ou champs d'un formulaire multipart |
 | `readFormBody(request)` | Idem, valeurs converties en chaînes pour les schémas de formulaire |
 | `parse(schema, input)` | Valide avec zod, ou lève un `400` avec `fieldErrors` |
@@ -121,6 +137,7 @@ export const PATCH = route(async (request, { params }: RouteContext<"/api/exempl
 | `ApiError`, `badRequest`, `notFound`, `fieldError` | Erreurs avec leur code HTTP |
 
 - La logique métier va dans `lib/server/services/`, pas dans la route.
+- Une écriture sur un incident passe par `changeIncident()` (`lib/server/events/store.ts`) : verrou, événement et projections dans la même transaction.
 - Après Next.js `dev` ou `build`, `RouteContext<"/api/...">` est typé automatiquement (`npx next typegen` pour le régénérer).
 - **Ajoutez la route à `public/openapi.json`** pour qu'elle apparaisse dans Swagger.
 

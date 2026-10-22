@@ -5,7 +5,7 @@ title: Endpoints
 
 # Endpoints
 
-Les 57 opérations de l'API, par domaine. Le détail des corps, des réponses et des erreurs, testable en direct, est sur **http://localhost:3000/api-docs**.
+Les 58 opérations de l'API, par domaine. Le détail des corps, des réponses et des erreurs, testable en direct, est sur **http://localhost:3000/api-docs**.
 
 **Accès** : _Public_ = sans compte ; _Connecté_ = tout utilisateur connecté ; _Héros_ = super-héros validé ; _Staff_ = modérateur ou admin ; _Admin_ = administrateur.
 
@@ -61,7 +61,7 @@ Les 57 opérations de l'API, par domaine. Le détail des corps, des réponses et
 | `POST` | `/api/incidents/{id}/review` | Connecté | Le déclarant note le héros (1 à 5), une fois |
 | `POST` | `/api/incidents/{id}/villain` | Staff | Crée la fiche du vilain nommé dans le signalement et la lie. Mail au déclarant |
 
-`GET /api/incidents` est interrogée en boucle par le centre d'opérations des héros (toutes les 10 s) et l'app citoyen (toutes les 15 s), via `components/ui/use-live-resource.ts`. Elle renvoie `{ serverTime, incidents }` : `serverTime` permet d'afficher « il y a 3 min » sans dépendre de l'horloge du téléphone.
+`GET /api/incidents` est rechargée par le centre d'opérations des héros et l'app citoyen dès qu'un incident change (flux `/api/events/stream`), et toutes les 60 s par sécurité (toutes les 10 à 20 s si le flux est coupé), via `components/ui/use-live-resource.ts`. Elle renvoie `{ serverTime, incidents }` : `serverTime` permet d'afficher « il y a 3 min » sans dépendre de l'horloge du téléphone.
 
 | | Incidents | `reporterId` |
 |---|---|---|
@@ -72,7 +72,8 @@ Les 57 opérations de l'API, par domaine. Le détail des corps, des réponses et
 
 | Méthode | Route | Accès | Effet |
 |---|---|---|---|
-| `GET` | `/api/heroes` | Connecté | Héros validés : position, disponibilité (`AVAILABLE`, `BUSY`, `OFF_DUTY`), statistiques. Sans email ni téléphone. Interrogée toutes les 20 s |
+| `GET` | `/api/heroes` | Connecté | Héros validés : position, disponibilité (`AVAILABLE`, `BUSY`, `OFF_DUTY`), statistiques. Sans email ni téléphone |
+| `GET` | `/api/events/stream` | Connecté | Flux temps réel (Server-Sent Events) : un message par événement du journal. Voir [Temps réel et hors ligne](../realtime-offline) |
 | `GET` | `/api/geocode/search?q=` | Connecté | Jusqu'à 5 adresses en France, à partir de 3 caractères |
 | `GET` | `/api/geocode/reverse?lat=&lng=` | Connecté | Adresse d'une position GPS |
 | `GET` | `/api/imdb/search?q=` | Héros, staff | Recherche de films IMDb, à partir de 2 caractères |
