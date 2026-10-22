@@ -21,6 +21,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Separate Docusaurus site, with its own tooling.
+    "docusaurus/**",
+    // MapLibre worker copied from node_modules (scripts/copy-maplibre-worker.mjs).
+    "public/vendor/**",
   ]),
 ]);
 
