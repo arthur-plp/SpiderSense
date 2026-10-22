@@ -5,7 +5,7 @@ import { sessions } from "@/db/schema";
 import { db } from "./db";
 import { generateToken, hashToken } from "./tokens";
 
-export const SESSION_COOKIE = "hsos_session";
+export const SESSION_COOKIE = "spidersense_session";
 const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 
 export async function readSessionToken(): Promise<string | undefined> {

@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 // Optimistic check only: without a session cookie, protected areas redirect to
 // the login page. Real authorization happens in the Data Access Layer.
-const SESSION_COOKIE = "hsos_session";
+const SESSION_COOKIE = "spidersense_session";
 
 export function proxy(request: NextRequest) {
   if (request.cookies.has(SESSION_COOKIE)) return NextResponse.next();

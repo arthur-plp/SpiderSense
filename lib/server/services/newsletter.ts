@@ -7,7 +7,7 @@ import { mailTemplates, queueMails } from "../mail";
 import { getBaseUrl } from "../url";
 
 /** Set after an anonymous sign-up so the footer form disappears (4.2). */
-export const NEWSLETTER_COOKIE = "hsos_newsletter";
+export const NEWSLETTER_COOKIE = "spidersense_newsletter";
 
 export async function hasNewsletterCookie(): Promise<boolean> {
   return (await cookies()).get(NEWSLETTER_COOKIE)?.value === "1";
