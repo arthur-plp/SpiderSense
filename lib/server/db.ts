@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { type Database, getDb } from "@/db";
 
 /**
- * Database access for rendering, Server Actions and Route Handlers.
+ * Database access for rendering and Route Handlers.
  * `connection()` keeps queries out of build-time prerendering: the data is
  * always read at request time. Inside `after()` callbacks, use `getDb()`.
  */

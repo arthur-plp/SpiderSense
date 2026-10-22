@@ -5,7 +5,7 @@ title: Prise en main
 
 # Prise en main
 
-Le backend est porté par Next.js : les **Server Actions** (`lib/actions/`) pour les formulaires et les mutations, et quelques **route handlers** (`app/api/**/route.ts`) pour les données temps réel. La base est **PostgreSQL**, avec **Drizzle** comme ORM.
+Le backend est une **API REST** portée par les route handlers de Next.js (`app/api/**/route.ts`), utilisée par l'interface elle-même et documentée dans Swagger. La base est **PostgreSQL**, avec **Drizzle** comme ORM.
 
 ## Prérequis
 
@@ -55,7 +55,7 @@ Aucun mail ne part sur Internet en développement : **Mailpit** les capture tous
 | Service | URL | Rôle |
 |---|---|---|
 | Application | http://localhost:3000 | Next.js (pages + API) |
-| Swagger | http://localhost:3000/api-docs | Documentation interactive des endpoints HTTP |
+| Swagger | http://localhost:3000/api-docs | Documentation interactive de l'API. Pour tester les routes protégées, connectez-vous d'abord avec `POST /api/auth/login` |
 | Mailpit | http://localhost:8025 | Boîte de réception de développement |
 | PostgreSQL | `localhost:5433` | Base de données |
 

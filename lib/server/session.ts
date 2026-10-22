@@ -12,7 +12,7 @@ export async function readSessionToken(): Promise<string | undefined> {
   return (await cookies()).get(SESSION_COOKIE)?.value;
 }
 
-/** Opens a database session and sets the httpOnly cookie (Server Actions only). */
+/** Opens a database session and sets the httpOnly cookie (route handlers only). */
 export async function createSession(userId: string): Promise<void> {
   const token = generateToken();
   const expiresAt = new Date(Date.now() + SESSION_LIFETIME_MS);

@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Spider Sense API",
-    "version": "0.2.0",
-    "description": "Endpoints HTTP de la plateforme Spider Sense.\n\nCes routes servent surtout aux cartes temps réel (interrogées régulièrement par le front) et aux champs de recherche. Les autres opérations (inscription, connexion, déclaration d'incident, modération…) passent par des **Server Actions** Next.js et ne sont pas des endpoints HTTP : elles sont décrites dans la documentation Docusaurus.\n\n**Authentification** : cookie de session `spidersense_session` (HttpOnly, SameSite=Lax), posé à la connexion sur `/connexion`. Pour tester ici, connectez-vous d'abord dans le même navigateur.\n\n**Erreurs** : `{ \"error\": \"message en français\" }`."
+    "version": "1.0.0",
+    "description": "API REST de la plateforme Spider Sense. **L'application l'utilise elle-même** : chaque formulaire et chaque bouton appelle un de ces endpoints.\n\n**Authentification** : `POST /api/auth/login` pose un cookie de session `spidersense_session` (HttpOnly, SameSite=Lax, 30 jours). Dans Swagger, connectez-vous avec cette route (bouton *Try it out*) : les appels suivants sont authentifiés. Comptes de démo : `citoyen@spider-sense.test`, `Spider-Man`, `moderateur@spider-sense.test`, `admin@spider-sense.test`, mot de passe `Demo1234!`.\n\n**Corps** : JSON (`multipart/form-data` pour l'avatar). Les nombres peuvent aussi être envoyés en chaîne ; un champ facultatif vide ou `null` est ignoré.\n\n**Erreurs** : `{ \"error\": \"message\" }`, plus `fieldErrors` (un tableau de messages par champ) pour les erreurs de validation. Les messages sont en français, affichables tels quels.\n\n**CSRF** : une requête `POST`/`PUT`/`PATCH`/`DELETE` dont l'en-tête `Origin` désigne un autre site est refusée (403)."
   },
   "servers": [
     {
@@ -17,6 +17,22 @@
   ],
   "tags": [
     {
+      "name": "Authentification",
+      "description": "Inscription, activation, connexion, mot de passe oublié."
+    },
+    {
+      "name": "Mon compte",
+      "description": "Le compte de l'utilisateur connecté."
+    },
+    {
+      "name": "Super-héros",
+      "description": "Actions réservées aux super-héros validés."
+    },
+    {
+      "name": "Incidents",
+      "description": "Signalement, prise en charge, intervention et modération des incidents."
+    },
+    {
       "name": "Temps réel",
       "description": "Données des cartes héros et citoyen."
     },
@@ -27,14 +43,1148 @@
     {
       "name": "Médias",
       "description": "Fichiers stockés en base."
+    },
+    {
+      "name": "Newsletter",
+      "description": "Abonnement sans compte."
+    },
+    {
+      "name": "Modération",
+      "description": "Espace de modération : demandes, comptes, avis, encyclopédie, blog, newsletter."
     }
   ],
   "paths": {
+    "/api/auth/activate": {
+      "post": {
+        "operationId": "activateAccount",
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Activer un compte",
+        "description": "Consomme le lien d'activation reçu par email. Le site le déclenche sur un clic, jamais au chargement de la page : les antivirus de messagerie ouvrent les liens.\n\nAccès : Public.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Compte activé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Votre compte est activé : vous pouvez vous connecter."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lien inconnu, déjà utilisé ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Ce lien d'activation est invalide ou a expiré."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/forgot-password": {
+      "post": {
+        "operationId": "forgotPassword",
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Mot de passe oublié",
+        "description": "Envoie un lien de réinitialisation valable 1 h. **Même réponse que le compte existe ou non.**\n\nAccès : Public.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Demande prise en compte",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Si un compte existe avec cette adresse, vous allez recevoir un lien de réinitialisation."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login",
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Se connecter",
+        "description": "Vérifie les identifiants et pose le cookie de session `spidersense_session` (30 jours). On se connecte avec son email, ou avec son alias pour un super-héros validé.\n\nAccès : Public.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connecté : le cookie de session est posé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "description": "Identifiant ou mot de passe incorrect",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Identifiant ou mot de passe incorrect."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Compte désactivé, ou pas encore activé (`unverifiedEmail` permet alors de renvoyer le lien)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "unverifiedEmail": {
+                          "type": "string",
+                          "format": "email"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "example": {
+                  "error": "Votre compte n'est pas encore activé : cliquez sur le lien reçu par email.",
+                  "unverifiedEmail": "camille@exemple.fr"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Se déconnecter",
+        "description": "Supprime la session et le cookie.\n\nAccès : Public.",
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "Fait (pas de contenu)"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "getCurrentUser",
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Utilisateur connecté",
+        "description": "Accès : Utilisateur connecté.",
+        "responses": {
+          "200": {
+            "description": "L'utilisateur de la session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "user"
+                  ],
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/CurrentUser"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "operationId": "register",
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Créer un compte",
+        "description": "Crée un compte **citoyen non activé**, envoie le lien d'activation (valable 7 jours) et prévient les modérateurs par email.\n\nAccès : Public.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Compte créé, en attente d'activation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "email"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "409": {
+            "description": "Un compte existe déjà avec cet email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "Un compte existe déjà avec cette adresse email.",
+                  "fieldErrors": {
+                    "email": [
+                      "Un compte existe déjà avec cette adresse email."
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/resend-activation": {
+      "post": {
+        "operationId": "resendActivation",
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Renvoyer le lien d'activation",
+        "description": "Envoie un nouveau lien si un compte non activé utilise cette adresse. **Même réponse dans tous les cas**, pour ne pas révéler quels emails ont un compte.\n\nAccès : Public.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Demande prise en compte",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Si un compte non activé correspond, un nouveau lien vient d'être envoyé."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "operationId": "resetPassword",
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Réinitialiser le mot de passe",
+        "description": "Change le mot de passe avec le lien reçu par email (usage unique, 1 h).\n\nAccès : Public.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mot de passe changé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Mot de passe modifié : vous pouvez vous connecter."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Champs invalides, ou lien expiré / déjà utilisé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Ce lien a expiré ou a déjà été utilisé. Faites une nouvelle demande."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/avatar": {
+      "put": {
+        "operationId": "uploadAvatar",
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Changer ma photo de profil",
+        "description": "Envoi en `multipart/form-data`. JPEG, PNG ou WebP. Servie ensuite par `GET /api/avatars/{userId}`.\n\nAccès : Utilisateur connecté.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "avatar"
+                ],
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Photo enregistrée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Photo de profil mise à jour."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Pas de fichier, format refusé ou image de plus de 600 Ko",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Formats acceptés : JPEG, PNG ou WebP."
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeAvatar",
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Retirer ma photo de profil",
+        "description": "Les initiales sont affichées à la place.\n\nAccès : Utilisateur connecté.",
+        "responses": {
+          "204": {
+            "description": "Fait (pas de contenu)"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/me/contact": {
+      "put": {
+        "operationId": "updateContact",
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Modifier mes coordonnées",
+        "description": "Téléphone et adresse postale.\n\nAccès : Utilisateur connecté.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Coordonnées mises à jour."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/me/email-change": {
+      "post": {
+        "operationId": "requestEmailChange",
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Demander un changement d'email",
+        "description": "Le changement est validé par un modérateur (l'utilisateur est prévenu par email). Une seule demande en attente à la fois.\n\nAccès : Utilisateur connecté.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "newEmail"
+                ],
+                "properties": {
+                  "newEmail": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Demande enregistrée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Demande envoyée : un modérateur va la valider."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "description": "Adresse déjà utilisée ou demande déjà en attente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "cancelEmailChange",
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Annuler ma demande de changement d'email",
+        "description": "Accès : Utilisateur connecté.",
+        "responses": {
+          "204": {
+            "description": "Fait (pas de contenu)"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/me/hero-application": {
+      "post": {
+        "operationId": "applyAsHero",
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Demander le statut de super-héros",
+        "description": "La demande est examinée par la modération, qui est prévenue par email.\n\nAccès : Utilisateur connecté.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeroApplicationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Demande envoyée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Demande envoyée ! L'administration va examiner votre profil."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "description": "Alias déjà pris, ou demande déjà en cours",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Ce nom de super-héros est déjà pris."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/newsletter": {
+      "post": {
+        "operationId": "subscribeMe",
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "M'abonner à la newsletter",
+        "description": "Avec l'email du compte.\n\nAccès : Utilisateur connecté.",
+        "responses": {
+          "201": {
+            "description": "Abonné",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Vous êtes inscrit(e) à la newsletter."
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "setNewsletterEnabled",
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Suspendre ou reprendre la newsletter",
+        "description": "L'abonnement est conservé.\n\nAccès : Utilisateur connecté.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "enabled"
+                ],
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Réception de la newsletter suspendue."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "unsubscribeMe",
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Me désabonner",
+        "description": "L'adresse est supprimée de la liste de diffusion.\n\nAccès : Utilisateur connecté.",
+        "responses": {
+          "204": {
+            "description": "Fait (pas de contenu)"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/me/password": {
+      "put": {
+        "operationId": "changePassword",
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Changer mon mot de passe",
+        "description": "Vérifie le mot de passe actuel.\n\nAccès : Utilisateur connecté.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Changé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Mot de passe modifié."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/me/duty": {
+      "put": {
+        "operationId": "setOnDuty",
+        "tags": [
+          "Super-héros"
+        ],
+        "summary": "Passer en service / hors service",
+        "description": "Hors service, le héros apparaît indisponible et ne reçoit plus les alertes.\n\nAccès : **Super-héros validé** (rôle `HERO` et profil approuvé).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "onDuty"
+                ],
+                "properties": {
+                  "onDuty": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onDuty"
+                  ],
+                  "properties": {
+                    "onDuty": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/me/hero-profile": {
+      "put": {
+        "operationId": "updateHeroProfile",
+        "tags": [
+          "Super-héros"
+        ],
+        "summary": "Modifier mon profil de super-héros",
+        "description": "Pouvoirs et biographie.\n\nAccès : **Super-héros validé** (rôle `HERO` et profil approuvé).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeroProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Profil de super-héros mis à jour."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/me/location": {
+      "put": {
+        "operationId": "updateLocation",
+        "tags": [
+          "Super-héros"
+        ],
+        "summary": "Mettre à jour ma position",
+        "description": "Position affichée sur les cartes des citoyens et des héros.\n\nAccès : **Super-héros validé** (rôle `HERO` et profil approuvé).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "lat",
+                  "lng"
+                ],
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90,
+                    "example": 48.8566
+                  },
+                  "lng": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180,
+                    "example": 2.3522
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistrée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "lat",
+                    "lng"
+                  ],
+                  "properties": {
+                    "lat": {
+                      "type": "number"
+                    },
+                    "lng": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/me/movies": {
+      "post": {
+        "operationId": "requestMovie",
+        "tags": [
+          "Super-héros"
+        ],
+        "summary": "Ajouter un film à ma filmographie",
+        "description": "Le serveur récupère lui-même la fiche sur IMDb à partir de l'identifiant. Le film apparaît après validation par un modérateur.\n\nAccès : **Super-héros validé** (rôle `HERO` et profil approuvé).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "imdbId"
+                ],
+                "properties": {
+                  "imdbId": {
+                    "type": "string",
+                    "pattern": "^tt\\d{5,10}$",
+                    "example": "tt0145487"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Film proposé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Film proposé : un modérateur va le valider."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Titre introuvable sur IMDb",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Film introuvable sur IMDb."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Film déjà dans la vidéothèque ou en attente de validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Ce film est déjà dans votre vidéothèque."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/movies/{movieId}": {
+      "delete": {
+        "operationId": "removeMovie",
+        "tags": [
+          "Super-héros"
+        ],
+        "summary": "Retirer un film de ma filmographie",
+        "description": "Accès : **Super-héros validé** (rôle `HERO` et profil approuvé).",
+        "parameters": [
+          {
+            "name": "movieId",
+            "in": "path",
+            "required": true,
+            "description": "Film (identifiant interne)",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Fait (pas de contenu)"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/reviews/{reviewId}/reply": {
+      "put": {
+        "operationId": "replyToReview",
+        "tags": [
+          "Super-héros"
+        ],
+        "summary": "Répondre à un avis",
+        "description": "Réponse publique du héros à l'avis d'un citoyen sur son intervention.\n\nAccès : **Super-héros validé** (rôle `HERO` et profil approuvé).",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "required": true,
+            "description": "Avis",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reply"
+                ],
+                "properties": {
+                  "reply": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Réponse publiée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Réponse publiée."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Avis introuvable ou concernant un autre héros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Avis introuvable."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/incidents": {
       "get": {
         "operationId": "listIncidents",
         "tags": [
-          "Temps réel"
+          "Incidents"
         ],
         "summary": "Incidents en cours",
         "description": "Incidents actifs (`REPORTED`, `IN_PROGRESS`), interrogés en boucle par les cartes.\n\n- **Héros et modérateurs** : reçoivent aussi les incidents terminés depuis moins de 24 h, avec `reporterId` toujours renseigné.\n- **Citoyens** : `reporterId` n'est renseigné que sur leurs propres signalements, `null` sinon.\n\nJamais mise en cache (`Cache-Control: no-store`).",
@@ -68,6 +1218,725 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      },
+      "post": {
+        "operationId": "reportIncident",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Signaler un incident",
+        "description": "Formulaire détaillé ou bouton SOS. Les super-héros en service et les modérateurs sont prévenus par email. Un modérateur peut fixer la priorité dès la création.\n\nAccès : Utilisateur connecté.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Incident créé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentCreated"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "description": "`priority` envoyé par un non-modérateur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Seuls les modérateurs fixent la priorité à la création."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents/nearby": {
+      "get": {
+        "operationId": "listNearbyIncidents",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Incidents actifs à proximité",
+        "description": "Incidents actifs à moins de 500 m, du plus proche au plus loin : l'app prévient le citoyen d'un doublon possible avant l'envoi. `reporterId` est toujours `null`.\n\nAccès : Utilisateur connecté.",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "example": 48.8566
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "example": 2.3522
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Incidents proches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "incidents"
+                  ],
+                  "properties": {
+                    "incidents": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/NearbyIncident"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/incidents/{id}": {
+      "get": {
+        "operationId": "getIncident",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Détail d'un incident",
+        "description": "Un citoyen ne voit `reporterId` que sur ses propres signalements ; un incident supprimé n'est visible que des modérateurs.\n\nAccès : Utilisateur connecté.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Incident",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "L'incident",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "incident"
+                  ],
+                  "properties": {
+                    "incident": {
+                      "$ref": "#/components/schemas/Incident"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateIncident",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Corriger un incident",
+        "description": "Correction par la modération : **tous les champs sont remplacés**. Le déclarant est prévenu par email s'il y a un changement ; `changed` liste les champs modifiés.\n\nAccès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Incident",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "changed": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteIncident",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Supprimer un incident",
+        "description": "Suppression douce (`deletedAt`) : l'incident reste dans l'historique du déclarant, qui reçoit le motif par email.\n\nAccès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Incident",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentDeleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Supprimé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Incident supprimé. Le déclarant a été prévenu par email."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/incidents/{id}/intervention": {
+      "post": {
+        "operationId": "takeIncident",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Prendre en charge un incident",
+        "description": "L'incident passe `IN_PROGRESS`. Un héros n'a qu'**une intervention en cours à la fois** (garanti par la base). Les modérateurs sont prévenus.\n\nAccès : **Super-héros validé** (rôle `HERO` et profil approuvé).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Incident",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Intervention démarrée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Intervention démarrée."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "Déjà pris en charge, terminé, ou héros déjà en intervention",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Cet incident est déjà pris en charge ou n'existe plus."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents/{id}/intervention/close": {
+      "post": {
+        "operationId": "closeIntervention",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Clôturer une intervention",
+        "description": "Rapport du héros en charge. Les modérateurs sont prévenus et le citoyen est invité par email à noter l'intervention.\n\nAccès : **Super-héros validé** (rôle `HERO` et profil approuvé).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Incident",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterventionReport"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Intervention clôturée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Intervention réussie."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "Pas d'intervention en cours de ce héros sur l'incident",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Aucune intervention en cours sur cet incident."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents/{id}/priority": {
+      "patch": {
+        "operationId": "setIncidentPriority",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Fixer la priorité",
+        "description": "Tri des incidents (4.1.1).\n\nAccès : Utilisateur connecté.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Incident",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "priority"
+                ],
+                "properties": {
+                  "priority": {
+                    "$ref": "#/components/schemas/IncidentPriority"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistrée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "priority": {
+                      "$ref": "#/components/schemas/IncidentPriority"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "description": "Ni super-héros validé ni modérateur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Seuls les super-héros et les modérateurs fixent la priorité."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents/{id}/reporter-contact": {
+      "get": {
+        "operationId": "getReporterContact",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Contact du déclarant",
+        "description": "Prénom et téléphone du citoyen, **uniquement pour le héros en charge** de l'intervention en cours.\n\nAccès : **Super-héros validé** (rôle `HERO` et profil approuvé).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Incident",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contact",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "contact"
+                  ],
+                  "properties": {
+                    "contact": {
+                      "type": "object",
+                      "required": [
+                        "firstName",
+                        "phone"
+                      ],
+                      "properties": {
+                        "firstName": {
+                          "type": "string"
+                        },
+                        "phone": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Pas en charge de cet incident",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Contact disponible seulement pour le héros en charge de l'intervention."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/incidents/{id}/review": {
+      "post": {
+        "operationId": "rateIntervention",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Noter l'intervention",
+        "description": "Note (1 à 5) et commentaire du déclarant sur le héros intervenu, une seule fois par incident (6.1.3).\n\nAccès : Utilisateur connecté.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Incident",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rating"
+                ],
+                "properties": {
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Avis enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Merci ! Votre avis a été transmis au super-héros."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Note invalide, intervention pas terminée, pas le déclarant, ou déjà noté",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Vous avez déjà noté cette intervention."
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/incidents/{id}/villain": {
+      "post": {
+        "operationId": "createVillainFromReport",
+        "tags": [
+          "Incidents"
+        ],
+        "summary": "Créer le vilain signalé",
+        "description": "Crée la fiche du vilain nommé par le citoyen (`reportedVillainName`) et la lie à l'incident ; si un vilain porte déjà ce nom, il est simplement lié. Le déclarant est prévenu.\n\nAccès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Incident",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vilain existant lié",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "created": {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Fiche créée et liée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "created": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }
@@ -104,77 +1973,6 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
-          }
-        }
-      }
-    },
-    "/api/geocode/search": {
-      "get": {
-        "operationId": "searchAddress",
-        "tags": [
-          "Recherche"
-        ],
-        "summary": "Suggestions d'adresses",
-        "description": "Jusqu'à 5 adresses en France correspondant à la saisie. Moins de 3 caractères : liste vide. La saisie est tronquée à 200 caractères.",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 3,
-              "maxLength": 200
-            },
-            "example": "10 rue de Rivoli"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Suggestions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "results"
-                  ],
-                  "properties": {
-                    "results": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Address"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthenticated"
-          },
-          "502": {
-            "description": "Nominatim injoignable (`results` vide)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "results": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Address"
-                      }
-                    },
-                    "error": {
-                      "type": "string",
-                      "example": "Service de géocodage indisponible"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -262,6 +2060,77 @@
                   "properties": {
                     "address": {
                       "type": "null"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Service de géocodage indisponible"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/geocode/search": {
+      "get": {
+        "operationId": "searchAddress",
+        "tags": [
+          "Recherche"
+        ],
+        "summary": "Suggestions d'adresses",
+        "description": "Jusqu'à 5 adresses en France correspondant à la saisie. Moins de 3 caractères : liste vide. La saisie est tronquée à 200 caractères.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            },
+            "example": "10 rue de Rivoli"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suggestions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "results"
+                  ],
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Address"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "502": {
+            "description": "Nominatim injoignable (`results` vide)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Address"
+                      }
                     },
                     "error": {
                       "type": "string",
@@ -402,6 +2271,969 @@
           }
         }
       }
+    },
+    "/api/newsletter/subscriptions": {
+      "post": {
+        "operationId": "subscribeToNewsletter",
+        "tags": [
+          "Newsletter"
+        ],
+        "summary": "S'abonner à la newsletter",
+        "description": "Sans compte. Envoie un mail de bienvenue avec un lien de désabonnement. **Même réponse si l'adresse était déjà abonnée.** Pose un cookie qui masque le formulaire dans ce navigateur.\n\nAccès : Public.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Abonné",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Merci ! Vous êtes inscrit(e) à la newsletter."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/api/newsletter/unsubscribe": {
+      "post": {
+        "operationId": "unsubscribe",
+        "tags": [
+          "Newsletter"
+        ],
+        "summary": "Se désabonner",
+        "description": "Avec le jeton du lien présent dans chaque newsletter. L'adresse est supprimée.\n\nAccès : Public.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Désabonné",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "C'est fait : votre adresse a été retirée de la newsletter et supprimée de nos fichiers."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lien inconnu ou déjà utilisé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Ce lien de désinscription est invalide ou a déjà été utilisé."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/articles": {
+      "post": {
+        "operationId": "createArticle",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Créer un article de blog",
+        "description": "Brouillon ou publié directement.\n\nAccès : **Modérateur ou administrateur**.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Article créé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleSaved"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "Slug déjà utilisé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/articles/{id}": {
+      "put": {
+        "operationId": "updateArticle",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Modifier un article de blog",
+        "description": "Accès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Article",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleSaved"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Slug déjà utilisé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteArticle",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Supprimer un article de blog",
+        "description": "Accès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Article",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Supprimé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Article supprimé."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/admin/email-changes/{requestId}/decision": {
+      "post": {
+        "operationId": "decideEmailChange",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Valider / refuser un changement d'email",
+        "description": "Accès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "description": "Demande de changement",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Décision enregistrée (l'intéressé est prévenu par email)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "approved": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/admin/hero-applications/{userId}/decision": {
+      "post": {
+        "operationId": "decideHeroApplication",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Valider / refuser une demande de super-héros",
+        "description": "Validée : le compte passe au rôle `HERO`.\n\nAccès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "Demandeur",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Décision enregistrée (l'intéressé est prévenu par email)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "approved": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/admin/hero-movies/{heroId}/{movieId}/decision": {
+      "post": {
+        "operationId": "decideHeroMovie",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Valider / refuser un film proposé par un héros",
+        "description": "Validé : le film apparaît dans la vidéothèque.\n\nAccès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "heroId",
+            "in": "path",
+            "required": true,
+            "description": "Héros",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "movieId",
+            "in": "path",
+            "required": true,
+            "description": "Film",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Décision enregistrée (l'intéressé est prévenu par email)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "approved": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/admin/newsletters": {
+      "post": {
+        "operationId": "sendNewsletter",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Envoyer une newsletter",
+        "description": "À tous les abonnés actifs, ou à un seul pour tester. Chaque mail contient un lien de désabonnement.\n\nAccès : **Modérateur ou administrateur**.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsletterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Envoyée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "recipients"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "recipients": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/admin/reviews/{reviewId}": {
+      "patch": {
+        "operationId": "setReviewHidden",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Masquer / réafficher un avis",
+        "description": "Un avis masqué ne compte plus dans la note du héros.\n\nAccès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "required": true,
+            "description": "Avis",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "hidden"
+                ],
+                "properties": {
+                  "hidden": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "hidden": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/admin/users/{userId}/role": {
+      "put": {
+        "operationId": "changeUserRole",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Changer le rôle d'un compte",
+        "description": "Jamais sur son propre compte. `HERO` exige un profil héros approuvé.\n\nAccès : **Administrateur** uniquement.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "Utilisateur",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "$ref": "#/components/schemas/Role"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "$ref": "#/components/schemas/Role"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/admin/users/{userId}/status": {
+      "patch": {
+        "operationId": "setUserDisabled",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Désactiver / réactiver un compte",
+        "description": "Désactivé : toutes les sessions du compte sont fermées et la connexion est refusée.\n\nAccès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "Utilisateur",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "disabled"
+                ],
+                "properties": {
+                  "disabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "disabled": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/admin/users/{userId}/verification": {
+      "post": {
+        "operationId": "verifyUser",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Marquer un citoyen comme vérifié",
+        "description": "Badge « Citoyen vérifié » : la modération a contrôlé son identité.\n\nAccès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "Utilisateur",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vérifié",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Le compte porte désormais le badge « Citoyen vérifié »."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Déjà vérifié ou introuvable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Ce compte est déjà vérifié ou n'existe plus."
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/admin/villains": {
+      "post": {
+        "operationId": "createVillain",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Créer une fiche de vilain",
+        "description": "Encyclopédie des super-vilains.\n\nAccès : **Modérateur ou administrateur**.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VillainRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Fiche créée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "id"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "Alias déjà pris",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/villains/{id}": {
+      "put": {
+        "operationId": "updateVillain",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Modifier une fiche de vilain",
+        "description": "Remplace tous les champs et les spécialités.\n\nAccès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Vilain",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VillainRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enregistrée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "id"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Alias déjà pris",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteVillain",
+        "tags": [
+          "Modération"
+        ],
+        "summary": "Supprimer une fiche de vilain",
+        "description": "Accès : **Modérateur ou administrateur**.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Vilain",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Supprimée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "message": "Fiche du vilain supprimée."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -423,6 +3255,50 @@
             },
             "example": {
               "error": "Non authentifié"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Rôle insuffisant",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Accès réservé"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Corps ou paramètre invalide : un message par champ dans `fieldErrors`",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "example": {
+              "error": "Certains champs sont à corriger.",
+              "fieldErrors": {
+                "city": [
+                  "La ville est obligatoire."
+                ]
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Ressource introuvable (ou identifiant qui n'est pas un UUID)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Ressource introuvable."
             }
           }
         }
@@ -887,6 +3763,796 @@
             "type": "string",
             "description": "Type de titre tel qu'IMDb l'affiche",
             "example": "feature"
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Message en français, affichable tel quel"
+          }
+        }
+      },
+      "ValidationError": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Error"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "fieldErrors": {
+                "type": "object",
+                "description": "Messages d'erreur par champ",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "CITIZEN",
+          "HERO",
+          "MODERATOR",
+          "ADMIN"
+        ]
+      },
+      "ReviewStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "APPROVED",
+          "REJECTED"
+        ]
+      },
+      "CurrentUser": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "lastName",
+          "role",
+          "avatarUrl",
+          "hero",
+          "isHero",
+          "isStaff"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "avatarUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hero": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "alias",
+                  "status"
+                ],
+                "properties": {
+                  "alias": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "$ref": "#/components/schemas/ReviewStatus"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Profil héros, s'il y a eu une demande"
+          },
+          "isHero": {
+            "type": "boolean",
+            "description": "Rôle `HERO` et profil approuvé"
+          },
+          "isStaff": {
+            "type": "boolean",
+            "description": "Modérateur ou administrateur"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": [
+          "civility",
+          "firstName",
+          "lastName",
+          "birthDate",
+          "email",
+          "password",
+          "passwordConfirmation",
+          "phone",
+          "street",
+          "postalCode",
+          "city",
+          "country",
+          "acceptTerms"
+        ],
+        "properties": {
+          "civility": {
+            "type": "string",
+            "enum": [
+              "MR",
+              "MRS",
+              "OTHER"
+            ]
+          },
+          "firstName": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "Camille"
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "Martin"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date",
+            "description": "13 ans minimum",
+            "example": "1992-04-14"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Normalisé (espaces retirés, minuscules)",
+            "example": "camille@exemple.fr"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "description": "Au moins une lettre et un chiffre",
+            "example": "Motdepasse1"
+          },
+          "passwordConfirmation": {
+            "type": "string",
+            "example": "Motdepasse1"
+          },
+          "phone": {
+            "type": "string",
+            "example": "06 12 34 56 78"
+          },
+          "street": {
+            "type": "string",
+            "example": "10 rue de Rivoli"
+          },
+          "addressComplement": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string",
+            "example": "75004"
+          },
+          "city": {
+            "type": "string",
+            "example": "Paris"
+          },
+          "country": {
+            "type": "string",
+            "example": "France"
+          },
+          "acceptTerms": {
+            "type": "boolean",
+            "const": true,
+            "description": "Consentement au traitement des données (RGPD)"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "identifier",
+          "password"
+        ],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Email, ou alias pour un super-héros validé",
+            "example": "citoyen@spider-sense.test"
+          },
+          "password": {
+            "type": "string",
+            "example": "Demo1234!"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": [
+          "user",
+          "homePath"
+        ],
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "role": {
+                "$ref": "#/components/schemas/Role"
+              },
+              "isHero": {
+                "type": "boolean"
+              },
+              "isStaff": {
+                "type": "boolean"
+              }
+            }
+          },
+          "homePath": {
+            "type": "string",
+            "description": "Espace de l'utilisateur",
+            "enum": [
+              "/citoyen",
+              "/heros",
+              "/admin"
+            ]
+          }
+        }
+      },
+      "TokenRequest": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Jeton du lien reçu par email (dernière partie de l'URL)"
+          }
+        }
+      },
+      "EmailRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "NewPassword": {
+        "type": "object",
+        "required": [
+          "password",
+          "passwordConfirmation"
+        ],
+        "properties": {
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "description": "Au moins une lettre et un chiffre"
+          },
+          "passwordConfirmation": {
+            "type": "string"
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TokenRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NewPassword"
+          }
+        ]
+      },
+      "ContactRequest": {
+        "type": "object",
+        "required": [
+          "phone",
+          "street",
+          "postalCode",
+          "city",
+          "country"
+        ],
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "06 12 34 56 78"
+          },
+          "street": {
+            "type": "string"
+          },
+          "addressComplement": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          }
+        }
+      },
+      "PasswordChangeRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "required": [
+              "currentPassword"
+            ],
+            "properties": {
+              "currentPassword": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "$ref": "#/components/schemas/NewPassword"
+          }
+        ]
+      },
+      "HeroApplicationRequest": {
+        "type": "object",
+        "required": [
+          "alias",
+          "powers"
+        ],
+        "properties": {
+          "alias": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Nom de super-héros, unique",
+            "example": "Miss Tornade"
+          },
+          "powers": {
+            "type": "string",
+            "description": "Pouvoirs séparés par des virgules ou des retours à la ligne (8 au plus)",
+            "example": "Vol, Contrôle du vent"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
+      },
+      "HeroProfileRequest": {
+        "type": "object",
+        "required": [
+          "powers"
+        ],
+        "properties": {
+          "powers": {
+            "type": "string",
+            "description": "Pouvoirs séparés par des virgules (8 au plus)",
+            "example": "Toile, Agilité"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
+      },
+      "IncidentCreateRequest": {
+        "type": "object",
+        "required": [
+          "typeId",
+          "description",
+          "city"
+        ],
+        "properties": {
+          "typeId": {
+            "type": "integer",
+            "description": "Type d'incident (référentiel `incident_types`)",
+            "example": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000,
+            "example": "Vol à l'arraché devant la station de métro."
+          },
+          "occurredAt": {
+            "type": "string",
+            "description": "Date et heure locales `AAAA-MM-JJTHH:mm`, pas dans le futur. Absent : maintenant",
+            "example": "2026-10-22T14:30"
+          },
+          "timezoneOffset": {
+            "type": "integer",
+            "description": "Décalage du fuseau du navigateur en minutes, comme `Date.getTimezoneOffset()` (-120 à Paris en été)",
+            "default": 0
+          },
+          "peopleInvolved": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "default": 1
+          },
+          "street": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string",
+            "maxLength": 10
+          },
+          "city": {
+            "type": "string",
+            "example": "Paris"
+          },
+          "country": {
+            "type": "string",
+            "default": "France"
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "example": 48.8566
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "example": 2.3522
+          },
+          "reportedVillainName": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Vilain reconnu par le citoyen"
+          },
+          "priority": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IncidentPriority"
+              }
+            ],
+            "description": "**Modérateurs uniquement** (403 sinon)"
+          }
+        }
+      },
+      "IncidentCreated": {
+        "type": "object",
+        "required": [
+          "message",
+          "id",
+          "heroesAvailable"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "heroesAvailable": {
+            "type": "integer",
+            "description": "Super-héros en service, prévenus de l'incident"
+          }
+        }
+      },
+      "IncidentUpdateRequest": {
+        "type": "object",
+        "description": "Remplace tous les champs : un champ facultatif absent est vidé.",
+        "required": [
+          "typeId",
+          "description",
+          "peopleInvolved",
+          "city"
+        ],
+        "properties": {
+          "typeId": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000
+          },
+          "peopleInvolved": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "street": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string",
+            "maxLength": 10
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "default": "France"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          },
+          "reportedVillainName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "priority": {
+            "$ref": "#/components/schemas/IncidentPriority"
+          },
+          "villainId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Fiche de l'encyclopédie liée"
+          }
+        }
+      },
+      "IncidentDeleteRequest": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "DUPLICATE",
+              "FALSE_REPORT",
+              "RESOLVED",
+              "OTHER"
+            ],
+            "description": "`OTHER` impose `details`"
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Précisions, envoyées au déclarant"
+          }
+        }
+      },
+      "InterventionReport": {
+        "type": "object",
+        "required": [
+          "outcome",
+          "peopleInvolved"
+        ],
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "SUCCEEDED",
+              "FAILED"
+            ]
+          },
+          "villainId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Vilain affronté (fiche de l'encyclopédie)"
+          },
+          "villainImprisoned": {
+            "type": "boolean",
+            "default": false,
+            "description": "Pris en compte seulement pour une intervention réussie avec un vilain"
+          },
+          "peopleInvolved": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "Personnes secourues"
+          }
+        }
+      },
+      "NearbyIncident": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Incident"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "distance": {
+                "type": "number",
+                "description": "Distance en mètres"
+              }
+            }
+          }
+        ]
+      },
+      "Decision": {
+        "type": "object",
+        "required": [
+          "approved"
+        ],
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VillainRequest": {
+        "type": "object",
+        "required": [
+          "alias",
+          "status"
+        ],
+        "properties": {
+          "alias": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Unique"
+          },
+          "firstName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "mainSector": {
+            "type": "string",
+            "maxLength": 255,
+            "example": "Quartier des Halles"
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "http(s) uniquement"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AT_LARGE",
+              "IMPRISONED"
+            ]
+          },
+          "imprisonedAt": {
+            "type": "string",
+            "format": "date"
+          },
+          "specialties": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Types d'incidents (ids inconnus ignorés)",
+            "example": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "ArticleRequest": {
+        "type": "object",
+        "required": [
+          "title",
+          "contentHtml",
+          "status"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Absent : calculé depuis le titre"
+          },
+          "coverUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "http(s) uniquement"
+          },
+          "contentHtml": {
+            "type": "string",
+            "description": "HTML de l'éditeur, nettoyé côté serveur (scripts, attributs dangereux…)"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED"
+            ]
+          }
+        }
+      },
+      "ArticleSaved": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL publique : `/blog/{slug}`"
+          }
+        }
+      },
+      "NewsletterRequest": {
+        "type": "object",
+        "required": [
+          "subject",
+          "contentHtml",
+          "target"
+        ],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "contentHtml": {
+            "type": "string",
+            "description": "HTML, nettoyé côté serveur"
+          },
+          "target": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "ONE"
+            ],
+            "description": "`ONE` : un seul abonné (envoi de test)"
+          },
+          "subscriptionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Obligatoire avec `target: ONE`"
           }
         }
       }

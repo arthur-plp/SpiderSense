@@ -5,117 +5,152 @@ title: Conventions
 
 # Conventions de l'API
 
-Le backend expose deux types d'opérations :
+Tout le backend passe par une **API REST** : les route handlers de `app/api/**/route.ts`. L'application l'utilise elle-même, chaque formulaire et chaque bouton appelant un endpoint. Ce que montre Swagger est donc exactement ce que fait l'interface.
 
-| | Server Actions | Route handlers |
-|---|---|---|
-| Où | `lib/actions/**/*.ts` (`"use server"`) | `app/api/**/route.ts` |
-| Usage | Formulaires et mutations : inscription, connexion, signalement, modération… | Lectures appelées par le front : cartes temps réel, recherches, images |
-| Appel | Directement depuis un composant React (`action={…}`, `useActionState`) | `fetch("/api/…")` |
-| Documentation | [Server Actions](./server-actions) | [Endpoints HTTP](./endpoints) et Swagger (http://localhost:3000/api-docs) |
+- **Référence interactive** : http://localhost:3000/api-docs (Swagger, alimenté par `public/openapi.json`).
+- **Vue d'ensemble** : [Endpoints](./endpoints).
 
-Les Server Actions ne sont pas des endpoints REST : Next.js les appelle via une requête `POST` interne à la page. Elles ne figurent donc pas dans Swagger.
+```
+Formulaire React ──fetch──► app/api/.../route.ts ──► lib/server/services/ ──► PostgreSQL
+  (useApiForm)               validation, droits        logique métier
+```
 
 ## Authentification
 
-La connexion (`/connexion`, action `login`) crée une session en base et pose un cookie `spidersense_session` :
+`POST /api/auth/login` crée une session en base et pose un cookie `spidersense_session` :
 
 - `HttpOnly` : inaccessible au JavaScript de la page, donc protégé contre le vol par XSS ;
-- `SameSite=Lax` : non envoyé par les requêtes `POST` venant d'autres sites, ce qui protège contre le CSRF ;
+- `SameSite=Lax` : non envoyé par les requêtes `POST` venant d'autres sites ;
 - `Secure` en production : uniquement transmis en HTTPS ;
 - valable **30 jours**. Seule l'empreinte SHA-256 du jeton est stockée (table `sessions`).
 
-On se connecte avec son email, ou avec son alias pour un super-héros validé. Le navigateur envoie le cookie automatiquement : le front n'a rien à gérer. Pour tester dans Swagger, connectez-vous d'abord sur l'application dans le même navigateur.
+On se connecte avec son email, ou avec son alias pour un super-héros validé. Le navigateur renvoie le cookie tout seul, à l'application comme à Swagger.
+
+:::tip Tester dans Swagger
+Ouvrez `POST /api/auth/login`, cliquez sur *Try it out* et envoyez `{ "identifier": "moderateur@spider-sense.test", "password": "Demo1234!" }`. Les appels suivants sont faits en tant que modérateur. `POST /api/auth/logout` pour changer de compte.
+:::
+
+### Protection CSRF
+
+En plus de `SameSite=Lax`, `route()` refuse (403) toute requête `POST`, `PUT`, `PATCH` ou `DELETE` dont l'en-tête `Origin` désigne un autre site. Les navigateurs envoient toujours cet en-tête sur ces requêtes. Un outil comme curl ou Postman, qui n'en envoie pas, reste accepté : il ne porte pas les cookies d'une victime.
 
 ### Contrôle d'accès
 
 Deux niveaux :
 
 1. **`proxy.ts`** : un contrôle optimiste. Sans cookie de session, `/citoyen`, `/heros` et `/admin` redirigent vers `/connexion?next=…`.
-2. **La couche d'accès aux données** (`lib/server/auth.ts`) : le vrai contrôle, fait dans chaque page, action ou route.
+2. **Chaque route** vérifie le rôle avec les helpers de `lib/server/api.ts` :
 
 | Helper | Accepte | Sinon |
 |---|---|---|
-| `getCurrentUser()` | Tout le monde | Renvoie `null` |
-| `requireUser(roles?)` | Utilisateur connecté (avec un des `roles` si précisé) | Redirige vers `/connexion`, ou vers l'espace de l'utilisateur |
-| `requireHero()` | Rôle `HERO` **et** profil héros approuvé | Redirige vers `/citoyen` |
-| `requireStaff()` | `MODERATOR` ou `ADMIN` | Redirige vers l'espace de l'utilisateur |
+| `apiUser()` | Utilisateur connecté | `401` |
+| `apiUser(["ADMIN"])` | Connecté avec un de ces rôles | `401` / `403` |
+| `apiHero()` | Rôle `HERO` **et** profil héros approuvé | `401` / `403` |
+| `apiStaff()` | `MODERATOR` ou `ADMIN` | `401` / `403` |
 
-Les `require*` redirigent : ils sont faits pour les pages et les Server Actions. Les route handlers utilisent `getCurrentUser()` et répondent `401` / `403` en JSON.
+Les pages utilisent les équivalents de `lib/server/auth.ts` (`requireUser`, `requireHero`, `requireStaff`), qui redirigent au lieu de répondre en JSON.
+
+## Requêtes
+
+- Corps en **JSON** ; `multipart/form-data` pour l'envoi de fichiers (avatar).
+- Les routes « formulaire » acceptent les nombres en nombre ou en chaîne (`"typeId": 3` comme `"typeId": "3"`). Un champ facultatif vide ou `null` est ignoré.
+- Dates en ISO 8601 (`2026-10-20T09:43:50.478Z`, ou `2001-08-10` pour une date seule).
+- Identifiants : UUID. Un identifiant mal formé dans l'URL donne un `404`.
 
 ## Réponses
 
-### Route handlers
+Succès : un objet JSON, avec un `message` en français quand il y a quelque chose à afficher, et les données utiles (`id` créé, etc.). Les données sont toujours enveloppées (`{ "incidents": [...] }`), jamais un tableau nu : on peut ajouter des champs sans casser le front. `204` sans corps quand il n'y a rien à dire (déconnexion, suppression de son avatar…).
 
-- Corps en **JSON**, dates en ISO 8601 (`2026-10-20T09:43:50.478Z`).
-- Les données sont enveloppées dans un objet (`{ "incidents": [...] }`, `{ "results": [...] }`), jamais un tableau nu : on peut ajouter des champs sans casser le front.
-- Les erreurs ont la forme `{ "error": "message en français" }` :
+Erreurs : `{ "error": "message" }`, plus `fieldErrors` pour les erreurs de validation :
+
+```json
+{
+  "error": "Certains champs sont à corriger.",
+  "fieldErrors": {
+    "city": ["La ville est obligatoire."],
+    "description": ["Décrivez la situation en quelques mots (10 caractères minimum)."]
+  }
+}
+```
 
 | Code | Cas |
 |---|---|
-| 400 | Paramètre invalide |
-| 401 | Pas de session (`Non authentifié`) |
-| 403 | Rôle insuffisant (`Accès réservé`) |
-| 404 | Ressource introuvable (corps vide pour les images) |
-| 502 | Service externe (Nominatim, IMDb) injoignable : le corps contient aussi une liste vide ou `null`, pour que le front reste utilisable |
+| 400 | Corps invalide (`fieldErrors`), JSON illisible, action impossible (lien expiré, déjà noté…) |
+| 401 | Pas de session (`Non authentifié`), identifiants incorrects |
+| 403 | Rôle insuffisant, compte désactivé ou non activé, origine refusée (CSRF) |
+| 404 | Ressource introuvable |
+| 409 | Conflit : email ou alias déjà pris, incident déjà pris en charge… |
+| 502 | Service externe (Nominatim, IMDb) injoignable |
+| 500 | Erreur inattendue (le détail est seulement dans les logs serveur) |
 
-### Server Actions
+Tous les messages sont en français, affichables tels quels. Les messages par défaut de zod sont aussi en français (`z.config(z.locales.fr())` dans `lib/validation.ts`).
 
-Les actions de formulaire renvoient un `ActionState` (`lib/action-state.ts`) :
-
-```ts
-type ActionState = {
-  status: "idle" | "success" | "error";
-  message?: string;                                     // affiché près du formulaire
-  fieldErrors?: Record<string, string[] | undefined>;   // un message par champ
-  values?: Record<string, string>;                      // valeurs saisies, pour ne pas vider le formulaire
-};
-```
-
-Les actions appelées par un bouton (prendre un incident, changer la priorité…) renvoient en général `{ ok: boolean; error?: string }`. Tous les messages sont en français, affichables tels quels.
+Certaines routes répondent la même chose que le compte existe ou non (`forgot-password`, `resend-activation`, abonnement à la newsletter) : on ne peut pas s'en servir pour savoir quels emails ont un compte.
 
 ## Mails
 
-Les mails partent **après** la réponse (`after()` de Next.js, dans `lib/server/mail/index.ts`) : une action n'attend jamais le serveur SMTP. Une erreur d'envoi est seulement journalisée.
+Les mails partent **après** la réponse (`after()` de Next.js, dans `lib/server/mail/index.ts`) : une route n'attend jamais le serveur SMTP. Une erreur d'envoi est seulement journalisée. Voir [Mails](../mails).
 
-- Avec `SMTP_URL` : envoi via Nodemailer (Mailpit en développement).
-- Sans `SMTP_URL` : le mail est enregistré dans `mail_outbox` et affiché sur `/dev/mails`.
-
-Les gabarits sont dans `lib/server/mail/templates.ts`.
-
-## Écrire un nouveau route handler
+## Écrire un endpoint
 
 ```ts
-// app/api/exemple/route.ts
-import { connection } from "next/server";
-import { getCurrentUser } from "@/lib/server/auth";
+// app/api/exemple/[id]/route.ts
+import { z } from "zod";
+import { apiStaff, check, parse, readBody, route, uuidParam } from "@/lib/server/api";
+import { faireQuelqueChose } from "@/lib/server/services/exemple";
 
-/** GET /api/exemple — ce que fait la route (qui y a accès). */
-export async function GET(request: Request) {
-  await connection(); // rendu dynamique : jamais figé au build
-  const user = await getCurrentUser();
-  if (!user) return Response.json({ error: "Non authentifié" }, { status: 401 });
-  // ...
-  return Response.json({ items: [] }, { headers: { "cache-control": "no-store" } });
-}
+const schema = z.object({ hidden: z.boolean() });
+
+/** PATCH /api/exemple/:id — ce que fait la route. */
+export const PATCH = route(async (request, { params }: RouteContext<"/api/exemple/[id]">) => {
+  const actor = await apiStaff();                         // 401 / 403
+  const id = uuidParam((await params).id);                // 404 si ce n'est pas un UUID
+  const { hidden } = parse(schema, await readBody(request)); // 400 + fieldErrors
+  check(await faireQuelqueChose(id, hidden, actor.id));   // 400 avec l'erreur du service
+  return Response.json({ message: "C'est fait." });
+});
 ```
+
+| Helper (`lib/server/api.ts`) | Rôle |
+|---|---|
+| `route(handler)` | Vérifie l'origine (CSRF), transforme une `ApiError` en réponse JSON, toute autre exception en `500` |
+| `readBody(request)` | Corps JSON, ou champs d'un formulaire multipart |
+| `readFormBody(request)` | Idem, valeurs converties en chaînes pour les schémas de formulaire |
+| `parse(schema, input)` | Valide avec zod, ou lève un `400` avec `fieldErrors` |
+| `check(result, status?)` | Lève l'erreur d'un résultat de service `{ ok: false, error }` |
+| `ApiError`, `badRequest`, `notFound`, `fieldError` | Erreurs avec leur code HTTP |
 
 - La logique métier va dans `lib/server/services/`, pas dans la route.
-- Ajoutez la route à `public/openapi.json` (Swagger) et à la page [Endpoints HTTP](./endpoints).
+- Après Next.js `dev` ou `build`, `RouteContext<"/api/...">` est typé automatiquement (`npx next typegen` pour le régénérer).
+- **Ajoutez la route à `public/openapi.json`** pour qu'elle apparaisse dans Swagger.
 
-## Écrire une nouvelle Server Action
+## Appeler l'API depuis le front
 
-```ts
-// lib/actions/exemple.ts
-"use server";
-import type { ActionState } from "@/lib/action-state";
-import { requireStaff } from "@/lib/server/auth";
+`lib/api-client.ts` et `lib/use-api-form.ts` :
 
-export async function monAction(_: ActionState, formData: FormData): Promise<ActionState> {
-  const actor = await requireStaff(); // toujours en premier : une action est appelable par n'importe qui
-  // valider formData, appeler un service de lib/server/services/, renvoyer un ActionState
-  return { status: "success", message: "C'est fait." };
+```tsx
+"use client";
+import { useApiForm } from "@/lib/use-api-form";
+
+export function ContactForm() {
+  // Même usage que useActionState : état (message, fieldErrors, valeurs saisies), action, en cours.
+  const [state, action, pending] = useApiForm({ method: "PUT", path: "/api/me/contact" });
+  return <form action={action}>{/* champs, FormMessage, SubmitButton */}</form>;
 }
 ```
 
-Ajoutez-la à la page [Server Actions](./server-actions).
+- Les champs du formulaire sont envoyés en JSON (les cases cochées plusieurs fois deviennent un tableau, un fichier passe en multipart).
+- En cas de succès, la page est rafraîchie (`router.refresh()`), ou `redirectTo` est ouvert : `"/admin/incidents/{id}"` est complété avec l'`id` de la réponse.
+- Un composant serveur ne peut pas passer de fonction à un composant client, mais il peut lui passer un **`ApiEndpoint`** (méthode, chemin, champs fixes). Pour un simple bouton dans un composant serveur, `ApiForm` fait l'appel :
+
+```tsx
+<ActionButton endpoint={{ method: "PATCH", path: `/api/admin/reviews/${review.id}`, body: { hidden: true } }}>
+  Masquer
+</ActionButton>
+
+<ApiForm endpoint={{ method: "DELETE", path: `/api/me/movies/${movie.movieId}` }}>
+  <SubmitButton>Retirer</SubmitButton>
+</ApiForm>
+```
+
+- Pour un appel hors formulaire : `apiRequest("POST", "/api/me/movies", { imdbId })`, qui renvoie `{ ok, data }` ou `{ ok: false, error, fieldErrors }` et ne lève jamais d'exception.

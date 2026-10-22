@@ -23,7 +23,7 @@ Spider Sense met en relation les citoyens et les super-héros :
 
 ## Stack
 
-- **Next.js** : pages, Server Actions et route handlers (`app/api/**/route.ts`)
+- **Next.js** : les pages, et une API REST (`app/api/**/route.ts`) que l'interface appelle pour toutes les opérations
 - **PostgreSQL** avec **Drizzle ORM** (ou PGlite, une base embarquée, sans Docker)
 - **Nodemailer** pour les mails, capturés par **Mailpit** en développement
 
@@ -31,4 +31,4 @@ Spider Sense met en relation les citoyens et les super-héros :
 
 1. [Prise en main](./backend/getting-started) : installer et lancer le projet.
 2. [Modèle de données](./backend/data-model) : les tables et les règles garanties par la base.
-3. [Conventions de l'API](./backend/api/conventions) : route handlers et Server Actions.
+3. [Conventions de l'API](./backend/api/conventions) et [Endpoints](./backend/api/endpoints), à tester dans Swagger (http://localhost:3000/api-docs).
