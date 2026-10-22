@@ -1,0 +1,197 @@
+{
+  "label": "avant",
+  "date": "2026-10-22T13:59:50.319Z",
+  "base": "http://localhost:3000",
+  "runs": 3,
+  "results": [
+    {
+      "name": "Accueil (statistiques globales)",
+      "role": "public",
+      "path": "/",
+      "p50": 3267.9758,
+      "p95": 3285.693299999999,
+      "max": 3285.693299999999,
+      "status": 200
+    },
+    {
+      "name": "Annuaire des super-héros",
+      "role": "public",
+      "path": "/super-heros",
+      "p50": 3188.690999999999,
+      "p95": 3299.2331999999988,
+      "max": 3299.2331999999988,
+      "status": 200
+    },
+    {
+      "name": "API incidents en cours (citoyen)",
+      "role": "citizen",
+      "path": "/api/incidents",
+      "p50": 20.03240000000369,
+      "p95": 24.714200000002165,
+      "max": 24.714200000002165,
+      "status": 200
+    },
+    {
+      "name": "API super-héros (cartes)",
+      "role": "citizen",
+      "path": "/api/heroes",
+      "p50": 2723.561300000001,
+      "p95": 2951.643600000003,
+      "max": 2951.643600000003,
+      "status": 200
+    },
+    {
+      "name": "API incidents à proximité",
+      "role": "citizen",
+      "path": "/api/incidents/nearby?lat=48.8566&lng=2.3522",
+      "p50": 52.82370000000083,
+      "p95": 62.58849999999802,
+      "max": 62.58849999999802,
+      "status": 200
+    },
+    {
+      "name": "App citoyen",
+      "role": "citizen",
+      "path": "/citoyen",
+      "p50": 2890.0576,
+      "p95": 3023.462099999997,
+      "max": 3023.462099999997,
+      "status": 200
+    },
+    {
+      "name": "Historique du citoyen",
+      "role": "citizen",
+      "path": "/citoyen/incidents",
+      "p50": 235.08230000000185,
+      "p95": 250.62200000000303,
+      "max": 250.62200000000303,
+      "status": 200
+    },
+    {
+      "name": "Détail d'un incident (citoyen)",
+      "role": "citizen",
+      "path": "/citoyen/incidents/650960be-cab1-4f47-8ab7-11228cf9e04e",
+      "p50": 87.9297000000006,
+      "p95": 93.53809999999794,
+      "max": 93.53809999999794,
+      "status": 200
+    },
+    {
+      "name": "Encyclopédie",
+      "role": "citizen",
+      "path": "/citoyen/encyclopedie",
+      "p50": 2959.5262999999977,
+      "p95": 2962.392100000012,
+      "max": 2962.392100000012,
+      "status": 200
+    },
+    {
+      "name": "Fiche d'un vilain",
+      "role": "citizen",
+      "path": "/citoyen/encyclopedie/vilains/02bcd24e-19c5-4272-adf0-c67e0503f6ae",
+      "p50": 636.8542999999918,
+      "p95": 667.5760000000009,
+      "max": 667.5760000000009,
+      "status": 200
+    },
+    {
+      "name": "API incidents (tableau des héros)",
+      "role": "hero",
+      "path": "/api/incidents",
+      "p50": 492.18039999999746,
+      "p95": 551.2236999999877,
+      "max": 551.2236999999877,
+      "status": 200
+    },
+    {
+      "name": "Centre d'opérations",
+      "role": "hero",
+      "path": "/heros",
+      "p50": 3969.1745999999985,
+      "p95": 5299.583400000003,
+      "max": 5299.583400000003,
+      "status": 200
+    },
+    {
+      "name": "Statistiques du héros",
+      "role": "hero",
+      "path": "/heros/statistiques",
+      "p50": 4320.258900000001,
+      "p95": 4834.678,
+      "max": 4834.678,
+      "status": 200
+    },
+    {
+      "name": "Tableau de bord modération",
+      "role": "moderator",
+      "path": "/admin",
+      "p50": 2200.5129000000015,
+      "p95": 2299.9043999999994,
+      "max": 2299.9043999999994,
+      "status": 200
+    },
+    {
+      "name": "Incidents (récents)",
+      "role": "moderator",
+      "path": "/admin/incidents",
+      "p50": 3119.6454000000085,
+      "p95": 3169.0022000000026,
+      "max": 3169.0022000000026,
+      "status": 200
+    },
+    {
+      "name": "Incidents (par priorité)",
+      "role": "moderator",
+      "path": "/admin/incidents?sort=priority",
+      "p50": 3474.7148999999918,
+      "p95": 3505.1990000000224,
+      "max": 3505.1990000000224,
+      "status": 200
+    },
+    {
+      "name": "Incidents (filtrés : vols réussis)",
+      "role": "moderator",
+      "path": "/admin/incidents?status=SUCCEEDED&type=1",
+      "p50": 1851.7458000000042,
+      "p95": 2278.0806000000157,
+      "max": 2278.0806000000157,
+      "status": 200
+    },
+    {
+      "name": "Incidents (page 200)",
+      "role": "moderator",
+      "path": "/admin/incidents?page=200",
+      "p50": 6492.051500000001,
+      "p95": 8749.168399999995,
+      "max": 8749.168399999995,
+      "status": 200
+    },
+    {
+      "name": "Super-héros (modération)",
+      "role": "moderator",
+      "path": "/admin/heros",
+      "p50": 3213.321399999986,
+      "p95": 3233.5690999999933,
+      "max": 3233.5690999999933,
+      "status": 200
+    },
+    {
+      "name": "Vilains (modération)",
+      "role": "moderator",
+      "path": "/admin/vilains",
+      "p50": 796.1431000000157,
+      "p95": 986.788899999985,
+      "max": 986.788899999985,
+      "status": 200
+    },
+    {
+      "name": "Fiche d'un héros (modération)",
+      "role": "moderator",
+      "path": "/admin/utilisateurs/14f52483-a9e0-4881-975b-7a4db1ee5725",
+      "p50": 775.640699999989,
+      "p95": 960.2819000000018,
+      "max": 960.2819000000018,
+      "status": 200
+    }
+  ]
+}

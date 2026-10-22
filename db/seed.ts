@@ -1,4 +1,5 @@
 import { count, eq } from "drizzle-orm";
+import { importIncidentsIntoJournal, rebuildProjections } from "../lib/server/events/projections";
 import { hashPassword } from "../lib/server/password";
 import type { Database } from "./index";
 import * as s from "./schema";
@@ -605,4 +606,8 @@ export async function seedDemoData(db: Database): Promise<void> {
     logs.push({ actorId: moderator.id, action: "user.disable", entityType: "user", entityId: citizenId.get("kevin")!, createdAt: daysAgo(20) });
     await tx.insert(s.activityLogs).values(logs);
   });
+
+  // The demo incidents are inserted directly: they enter the journal as imported, then the projections follow.
+  await importIncidentsIntoJournal(db, "seed");
+  await rebuildProjections(db);
 }

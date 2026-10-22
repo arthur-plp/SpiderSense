@@ -18,6 +18,7 @@ import { requireStaff } from "@/lib/server/auth";
 import {
   getDuplicateMap,
   INCIDENT_SORTS,
+  INCIDENTS_MAX_PAGES,
   INCIDENTS_PAGE_SIZE,
   listAdminIncidents,
   parseIncidentFilters,
@@ -218,7 +219,14 @@ export default async function AdminIncidentsPage({ searchParams }: PageProps<"/a
         </DataTable>
       )}
 
-      <Pagination pathname="/admin/incidents" params={params} page={filters.page} pageSize={INCIDENTS_PAGE_SIZE} total={total} />
+      <Pagination
+        pathname="/admin/incidents"
+        params={params}
+        page={Math.min(filters.page, INCIDENTS_MAX_PAGES)}
+        pageSize={INCIDENTS_PAGE_SIZE}
+        total={total}
+        maxPages={INCIDENTS_MAX_PAGES}
+      />
     </>
   );
 }

@@ -1,6 +1,6 @@
 import "server-only";
-import { and, eq, isNull, sql } from "drizzle-orm";
-import { incidentTypes, incidents, villainSpecialties, villains } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { incidentTypes, villainSpecialties, villainStats, villains } from "@/db/schema";
 import { db } from "../db";
 
 export type VillainDto = {
@@ -37,10 +37,9 @@ export async function listVillains(villainId?: string): Promise<VillainDto[]> {
       .innerJoin(incidentTypes, eq(villainSpecialties.incidentTypeId, incidentTypes.id))
       .where(villainId ? eq(villainSpecialties.villainId, villainId) : undefined),
     database
-      .select({ villainId: incidents.villainId, count: sql<number>`count(*)::int` })
-      .from(incidents)
-      .where(and(isNull(incidents.deletedAt), villainId ? eq(incidents.villainId, villainId) : undefined))
-      .groupBy(incidents.villainId),
+      .select({ villainId: villainStats.villainId, count: villainStats.incidents })
+      .from(villainStats)
+      .where(villainId ? eq(villainStats.villainId, villainId) : undefined),
   ]);
   const countOf = new Map(counts.map((row) => [row.villainId, row.count]));
   return rows.map((villain) => ({

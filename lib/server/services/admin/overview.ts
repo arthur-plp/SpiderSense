@@ -1,11 +1,11 @@
 import "server-only";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import {
   emailChangeRequests,
   heroMovies,
   heroProfiles,
   heroReviews,
-  incidents,
+  incidentCounts,
   users,
 } from "@/db/schema";
 import { db } from "../../db";
@@ -27,13 +27,13 @@ export async function getModerationCounters(): Promise<ModerationCounters> {
   const database = await db();
   const [[toPrioritize], [heroes], [movies], [emails], [reviews], [people]] = await Promise.all([
     database
-      .select({ count: sql<number>`count(*)::int` })
-      .from(incidents)
+      .select({ count: sql<number>`coalesce(sum(${incidentCounts.incidents}), 0)::int` })
+      .from(incidentCounts)
       .where(
         and(
-          isNull(incidents.deletedAt),
-          isNull(incidents.priority),
-          inArray(incidents.status, ["REPORTED", "IN_PROGRESS"]),
+          eq(incidentCounts.deleted, false),
+          eq(incidentCounts.priority, "NONE"),
+          inArray(incidentCounts.status, ["REPORTED", "IN_PROGRESS"]),
         ),
       ),
     database.select({ count: sql<number>`count(*)::int` }).from(heroProfiles).where(eq(heroProfiles.status, "PENDING")),

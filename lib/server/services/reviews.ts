@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, type SQL } from "drizzle-orm
 import { heroProfiles, heroReviews, incidentTypes, incidents, users } from "@/db/schema";
 import { logActivity } from "../activity";
 import { db } from "../db";
+import { appendIncidentEvent, markCommitted } from "../events/store";
 
 export type ReviewDto = {
   id: string;
@@ -138,12 +139,20 @@ export async function createReview(
   if (!incident || !incident.heroId || (incident.status !== "SUCCEEDED" && incident.status !== "FAILED")) {
     return { ok: false, error: "Vous ne pouvez noter que les interventions terminées sur vos signalements." };
   }
-  const inserted = await database
-    .insert(heroReviews)
-    .values({ incidentId, citizenId, heroId: incident.heroId, rating, comment })
-    .onConflictDoNothing({ target: heroReviews.incidentId })
-    .returning({ id: heroReviews.id });
-  if (inserted.length === 0) return { ok: false, error: "Vous avez déjà noté cette intervention." };
+  const heroId = incident.heroId;
+  const recorded = await database.transaction(async (tx) => {
+    const rows = await tx
+      .insert(heroReviews)
+      .values({ incidentId, citizenId, heroId, rating, comment })
+      .onConflictDoNothing({ target: heroReviews.incidentId })
+      .returning({ id: heroReviews.id });
+    if (rows.length === 0) return null;
+    const event = await appendIncidentEvent(tx, incidentId, "IncidentReviewed", citizenId, { reviewId: rows[0].id, heroId, rating });
+    return { id: rows[0].id, event };
+  });
+  if (!recorded) return { ok: false, error: "Vous avez déjà noté cette intervention." };
+  markCommitted([recorded.event]);
+  const inserted = [{ id: recorded.id }];
   await logActivity({ actorId: citizenId, action: "review.create", entityType: "review", entityId: inserted[0].id, metadata: { rating } });
   return { ok: true };
 }

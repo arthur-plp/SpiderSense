@@ -1,6 +1,6 @@
 import "server-only";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
-import { heroMovies, heroReviews, incidentTypes, incidents, villains } from "@/db/schema";
+import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { heroMovies, heroReviews, heroStats, heroVillainStats, incidentCounts, incidentTypes, incidents, villains } from "@/db/schema";
 import { db } from "../db";
 
 export type TypeShare = { code: string; label: string; count: number; percent: number };
@@ -18,30 +18,23 @@ export type GlobalStats = {
   typeShares: TypeShare[];
 };
 
-/** Section 5.8.1 of the specification. */
+/**
+ * Section 5.8.1 of the specification. Read from the incident_counts
+ * projection (a few dozen rows) instead of aggregating every incident.
+ */
 export async function getGlobalStats(): Promise<GlobalStats> {
   const database = await db();
-  const [[totals], types, [villainTotals]] = await Promise.all([
+  const [counts, types, [villainTotals]] = await Promise.all([
     database
       .select({
-        totalIncidents: sql<number>`count(*)::int`,
-        activeIncidents: sql<number>`count(*) filter (where ${incidents.status} in ('REPORTED', 'IN_PROGRESS'))::int`,
-        interventions: sql<number>`count(*) filter (where ${incidents.heroId} is not null)::int`,
-        succeeded: sql<number>`count(*) filter (where ${incidents.status} = 'SUCCEEDED')::int`,
-        failed: sql<number>`count(*) filter (where ${incidents.status} = 'FAILED')::int`,
-        // Rescued = people involved in a succeeded intervention, not the number of interventions.
-        citizensSaved: sql<number>`coalesce(sum(${incidents.peopleInvolved}) filter (where ${incidents.status} = 'SUCCEEDED'), 0)::int`,
-        endangeredCitizensSaved: sql<number>`coalesce(sum(${incidents.peopleInvolved}) filter (where ${incidents.status} = 'SUCCEEDED' and ${incidentTypes.endangersCitizens}), 0)::int`,
+        typeId: incidentCounts.typeId,
+        status: incidentCounts.status,
+        incidents: incidentCounts.incidents,
+        people: incidentCounts.peopleInvolved,
       })
-      .from(incidents)
-      .innerJoin(incidentTypes, eq(incidents.typeId, incidentTypes.id))
-      .where(isNull(incidents.deletedAt)),
-    database
-      .select({ code: incidentTypes.code, label: incidentTypes.label, count: sql<number>`count(${incidents.id})::int` })
-      .from(incidentTypes)
-      .leftJoin(incidents, and(eq(incidents.typeId, incidentTypes.id), isNull(incidents.deletedAt)))
-      .groupBy(incidentTypes.id)
-      .orderBy(desc(sql`count(${incidents.id})`)),
+      .from(incidentCounts)
+      .where(eq(incidentCounts.deleted, false)),
+    database.select().from(incidentTypes).orderBy(incidentTypes.id),
     database
       .select({
         identified: sql<number>`count(*)::int`,
@@ -49,14 +42,40 @@ export async function getGlobalStats(): Promise<GlobalStats> {
       })
       .from(villains),
   ]);
-  const total = types.reduce((sum, type) => sum + type.count, 0);
+  const endangers = new Set(types.filter((type) => type.endangersCitizens).map((type) => type.id));
+  const totals = {
+    totalIncidents: 0,
+    activeIncidents: 0,
+    interventions: 0,
+    succeeded: 0,
+    failed: 0,
+    citizensSaved: 0,
+    endangeredCitizensSaved: 0,
+  };
+  const perType = new Map<number, number>();
+  for (const row of counts) {
+    totals.totalIncidents += row.incidents;
+    perType.set(row.typeId, (perType.get(row.typeId) ?? 0) + row.incidents);
+    if (row.status === "REPORTED" || row.status === "IN_PROGRESS") totals.activeIncidents += row.incidents;
+    // A hero is assigned from IN_PROGRESS on (database check incidents_intervention_matches_status).
+    if (row.status !== "REPORTED") totals.interventions += row.incidents;
+    if (row.status === "FAILED") totals.failed += row.incidents;
+    if (row.status === "SUCCEEDED") {
+      totals.succeeded += row.incidents;
+      // Rescued = people involved in a succeeded intervention, not the number of interventions.
+      totals.citizensSaved += row.people;
+      if (endangers.has(row.typeId)) totals.endangeredCitizensSaved += row.people;
+    }
+  }
   return {
     ...totals,
     villainsIdentified: villainTotals.identified,
     villainsImprisoned: villainTotals.imprisoned,
     typeShares: types
+      .map((type) => ({ code: type.code, label: type.label, count: perType.get(type.id) ?? 0 }))
       .filter((type) => type.count > 0)
-      .map((type) => ({ ...type, percent: total === 0 ? 0 : (type.count / total) * 100 })),
+      .sort((a, b) => b.count - a.count)
+      .map((type) => ({ ...type, percent: totals.totalIncidents === 0 ? 0 : (type.count / totals.totalIncidents) * 100 })),
   };
 }
 
@@ -77,17 +96,20 @@ export type HeroStats = {
 export async function getHeroStats(heroId: string): Promise<HeroStats> {
   const database = await db();
   const mine = and(eq(incidents.heroId, heroId), isNull(incidents.deletedAt));
-  const [[totals], [ratings], [movies], [enemy], weekly] = await Promise.all([
+  const [[totals], [imprisoned], [ratings], [movies], [enemy], weekly] = await Promise.all([
     database
       .select({
-        interventions: sql<number>`count(*)::int`,
-        succeeded: sql<number>`count(*) filter (where ${incidents.status} = 'SUCCEEDED')::int`,
-        failed: sql<number>`count(*) filter (where ${incidents.status} = 'FAILED')::int`,
-        villainsImprisoned: sql<number>`count(distinct ${incidents.villainId}) filter (where ${incidents.villainImprisoned})::int`,
-        citizensSaved: sql<number>`coalesce(sum(${incidents.peopleInvolved}) filter (where ${incidents.status} = 'SUCCEEDED'), 0)::int`,
+        interventions: heroStats.interventions,
+        succeeded: heroStats.succeeded,
+        failed: heroStats.failed,
+        citizensSaved: heroStats.citizensSaved,
       })
-      .from(incidents)
-      .where(mine),
+      .from(heroStats)
+      .where(eq(heroStats.heroId, heroId)),
+    database
+      .select({ count: sql<number>`count(*)::int` })
+      .from(heroVillainStats)
+      .where(and(eq(heroVillainStats.heroId, heroId), gt(heroVillainStats.imprisonments, 0))),
     database
       .select({ rating: sql<number | null>`avg(${heroReviews.rating})::float8`, ratingCount: sql<number>`count(*)::int` })
       .from(heroReviews)
@@ -98,13 +120,13 @@ export async function getHeroStats(heroId: string): Promise<HeroStats> {
       .where(and(eq(heroMovies.heroId, heroId), eq(heroMovies.status, "APPROVED"))),
     // Worst enemy: the villain this hero has faced the most.
     database
-      .select({ id: villains.id, alias: villains.alias, encounters: sql<number>`count(*)::int` })
-      .from(incidents)
-      .innerJoin(villains, eq(incidents.villainId, villains.id))
-      .where(mine)
-      .groupBy(villains.id)
-      .orderBy(desc(sql`count(*)`), villains.alias)
+      .select({ id: villains.id, alias: villains.alias, encounters: heroVillainStats.encounters })
+      .from(heroVillainStats)
+      .innerJoin(villains, eq(heroVillainStats.villainId, villains.id))
+      .where(and(eq(heroVillainStats.heroId, heroId), gt(heroVillainStats.encounters, 0)))
+      .orderBy(desc(heroVillainStats.encounters), villains.alias)
       .limit(1),
+    // 8 weeks of one hero: read through incidents_hero_started_at_idx.
     database
       .select({
         weekStart: sql<string>`to_char(date_trunc('week', ${incidents.interventionStartedAt}), 'YYYY-MM-DD')`,
@@ -129,7 +151,11 @@ export async function getHeroStats(heroId: string): Promise<HeroStats> {
   });
 
   return {
-    ...totals,
+    interventions: totals?.interventions ?? 0,
+    succeeded: totals?.succeeded ?? 0,
+    failed: totals?.failed ?? 0,
+    citizensSaved: totals?.citizensSaved ?? 0,
+    villainsImprisoned: imprisoned.count,
     rating: ratings.rating,
     ratingCount: ratings.ratingCount,
     moviesCount: movies.count,

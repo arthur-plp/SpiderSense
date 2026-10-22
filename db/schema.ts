@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  bigint,
   boolean,
   check,
   customType,
@@ -307,10 +308,28 @@ export const incidents = pgTable(
     uniqueIndex("incidents_one_active_intervention_per_hero")
       .on(t.heroId)
       .where(sql`${t.status} = 'IN_PROGRESS' AND ${t.deletedAt} IS NULL`),
-    index("incidents_status_priority_idx").on(t.status, t.priority),
-    index("incidents_reporter_id_idx").on(t.reporterId),
-    index("incidents_hero_id_idx").on(t.heroId),
-    index("incidents_villain_id_idx").on(t.villainId),
+    // Lists sorted by date, read through an index instead of sorting 5M rows
+    // (scanned backwards for "newest first").
+    index("incidents_created_at_idx").on(t.createdAt).where(sql`${t.deletedAt} IS NULL`),
+    index("incidents_status_created_at_idx").on(t.status, t.createdAt).where(sql`${t.deletedAt} IS NULL`),
+    index("incidents_type_created_at_idx").on(t.typeId, t.createdAt).where(sql`${t.deletedAt} IS NULL`),
+    // Same expression as the "priority" sort of the moderation list.
+    index("incidents_priority_rank_idx")
+      .on(
+        sql`(case when ${t.priority} = 'HIGH' then 0 when ${t.priority} is null then 1 when ${t.priority} = 'NORMAL' then 2 else 3 end)`,
+        // Mixed directions (rank ascending, newest first): the index must say so.
+        t.createdAt.desc().nullsFirst(),
+      )
+      .where(sql`${t.deletedAt} IS NULL`),
+    // Live maps: the few active incidents, and what ended in the last 24 hours.
+    index("incidents_active_idx")
+      .on(t.createdAt)
+      .where(sql`${t.status} IN ('REPORTED', 'IN_PROGRESS') AND ${t.deletedAt} IS NULL`),
+    index("incidents_ended_at_idx").on(t.interventionEndedAt).where(sql`${t.deletedAt} IS NULL`),
+    index("incidents_reporter_created_at_idx").on(t.reporterId, t.createdAt),
+    index("incidents_hero_created_at_idx").on(t.heroId, t.createdAt).where(sql`${t.deletedAt} IS NULL`),
+    index("incidents_hero_started_at_idx").on(t.heroId, t.interventionStartedAt).where(sql`${t.deletedAt} IS NULL`),
+    index("incidents_villain_created_at_idx").on(t.villainId, t.createdAt).where(sql`${t.deletedAt} IS NULL`),
     check("incidents_people_involved_positive", sql`${t.peopleInvolved} >= 0`),
     check(
       "incidents_intervention_matches_status",
@@ -491,4 +510,97 @@ export const activityLogs = pgTable(
     index("activity_logs_entity_idx").on(t.entityType, t.entityId),
     index("activity_logs_created_at_idx").on(t.createdAt),
   ],
+);
+
+// --- Event store and projections ----------------------------------------------
+
+// Append-only journal: every change of an incident (or of a hero's presence)
+// is recorded as an immutable event, in the same transaction as the change.
+export const domainEvents = pgTable(
+  "domain_events",
+  {
+    // Global order of the journal.
+    sequence: bigint("sequence", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    id: uuid("id").notNull().unique().defaultRandom(),
+    aggregateType: varchar("aggregate_type", { length: 30 }).notNull(),
+    aggregateId: uuid("aggregate_id").notNull(),
+    // Position in the stream of the aggregate: two concurrent writers can't both append version n.
+    version: integer("version").notNull(),
+    type: varchar("type", { length: 60 }).notNull(),
+    payload: jsonb("payload").notNull(),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    // When it happened (client clock for actions made offline) vs. when the server stored it.
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    metadata: jsonb("metadata"),
+  },
+  (t) => [
+    uniqueIndex("domain_events_stream_idx").on(t.aggregateType, t.aggregateId, t.version),
+    index("domain_events_type_idx").on(t.type, t.sequence),
+  ],
+);
+
+// Read models kept up to date from the events, so statistics never scan the incidents.
+export const incidentCounts = pgTable(
+  "incident_counts",
+  {
+    status: incidentStatus("status").notNull(),
+    typeId: smallint("type_id")
+      .notNull()
+      .references(() => incidentTypes.id, { onDelete: "cascade" }),
+    // HIGH / NORMAL / LOW, or NONE (a primary key column can't be null).
+    priority: varchar("priority", { length: 10 }).notNull(),
+    deleted: boolean("deleted").notNull(),
+    incidents: integer("incidents").notNull().default(0),
+    peopleInvolved: bigint("people_involved", { mode: "number" }).notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.status, t.typeId, t.priority, t.deleted] })],
+);
+
+export const heroStats = pgTable("hero_stats", {
+  heroId: uuid("hero_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  interventions: integer("interventions").notNull().default(0),
+  succeeded: integer("succeeded").notNull().default(0),
+  failed: integer("failed").notNull().default(0),
+  citizensSaved: bigint("citizens_saved", { mode: "number" }).notNull().default(0),
+});
+
+export const heroVillainStats = pgTable(
+  "hero_villain_stats",
+  {
+    heroId: uuid("hero_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    villainId: uuid("villain_id")
+      .notNull()
+      .references(() => villains.id, { onDelete: "cascade" }),
+    encounters: integer("encounters").notNull().default(0),
+    imprisonments: integer("imprisonments").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.heroId, t.villainId] })],
+);
+
+export const villainStats = pgTable("villain_stats", {
+  villainId: uuid("villain_id")
+    .primaryKey()
+    .references(() => villains.id, { onDelete: "cascade" }),
+  incidents: integer("incidents").notNull().default(0),
+});
+
+// Responses of the requests sent with an Idempotency-Key header (offline replays).
+export const idempotencyKeys = pgTable(
+  "idempotency_keys",
+  {
+    key: uuid("key").primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    method: varchar("method", { length: 10 }).notNull(),
+    path: text("path").notNull(),
+    // Null while the first request is still running.
+    status: integer("status"),
+    response: jsonb("response"),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [index("idempotency_keys_created_at_idx").on(t.createdAt)],
 );

@@ -13,6 +13,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/db-seed.ts",
+    "db:load": "tsx scripts/db-load.ts",
+    "bench": "tsx scripts/bench.ts",
+    "explain": "tsx scripts/explain.ts",
+    "events:rebuild": "tsx scripts/events-rebuild.ts",
     "services:up": "docker compose up -d db mailpit",
     "services:down": "docker compose stop db mailpit",
     "docs": "npm --prefix docusaurus start -- --port 3001"

@@ -12,6 +12,7 @@ import { distanceInMeters, DUPLICATE_RADIUS_METERS } from "@/lib/geo";
 import type { IncidentPriority, IncidentStatus } from "@/lib/labels";
 import { logActivity } from "../activity";
 import { db, isUniqueViolation } from "../db";
+import { changeIncident, createIncidentWithEvent } from "../events/store";
 import {
   getHeroEmails,
   getStaffEmails,
@@ -21,6 +22,7 @@ import {
   toMany,
 } from "../mail";
 import type { IncidentMailInfo } from "../mail/templates";
+import { actionTime } from "../request-context";
 import { getBaseUrl } from "../url";
 
 export type IncidentDto = {
@@ -150,9 +152,9 @@ export function listHeroBoardIncidents(): Promise<IncidentDto[]> {
   return selectIncidents(and(notDeleted, or(isActive, gt(incidents.interventionEndedAt, since))));
 }
 
-/** A citizen's history, including incidents removed by moderators. */
-export function listIncidentsReportedBy(userId: string): Promise<IncidentDto[]> {
-  return selectIncidents(eq(incidents.reporterId, userId));
+/** A citizen's latest reports, including incidents removed by moderators. */
+export function listIncidentsReportedBy(userId: string, limit = 100): Promise<IncidentDto[]> {
+  return selectIncidents(eq(incidents.reporterId, userId), limit);
 }
 
 export function listInterventionsOf(heroId: string, limit = 50): Promise<IncidentDto[]> {
@@ -262,21 +264,23 @@ export type NewIncident = {
 
 /** Workflow 4.1: the incident shows up for heroes and moderators, who get an email. */
 export async function createIncident(input: NewIncident, reporterId: string): Promise<string> {
-  const database = await db();
-  const [created] = await database
-    .insert(incidents)
-    .values({ ...input, priority: input.priority ?? null, reporterId })
-    .returning({ id: incidents.id });
-  await logActivity({ actorId: reporterId, action: "incident.create", entityType: "incident", entityId: created.id });
+  const id = await createIncidentWithEvent(reporterId, async (tx) => {
+    const [created] = await tx
+      .insert(incidents)
+      .values({ ...input, priority: input.priority ?? null, reporterId })
+      .returning({ id: incidents.id });
+    return created.id;
+  });
+  await logActivity({ actorId: reporterId, action: "incident.create", entityType: "incident", entityId: id });
 
-  const incident = (await getIncident(created.id))!;
+  const incident = (await getIncident(id))!;
   const [baseUrl, staff, heroes] = await Promise.all([getBaseUrl(), getStaffEmails(), getHeroEmails()]);
   const info = toMailInfo(incident);
   queueMails([
     ...toMany(staff, mailTemplates.incidentReported(info, `${baseUrl}/admin/incidents/${incident.id}`)),
     ...toMany(heroes, mailTemplates.incidentReported(info, `${baseUrl}/heros?incident=${incident.id}`)),
   ]);
-  return created.id;
+  return id;
 }
 
 export type MutationResult = { ok: true } | { ok: false; error: string };
@@ -286,34 +290,36 @@ export async function setIncidentPriority(
   priority: IncidentPriority,
   actorId: string,
 ): Promise<MutationResult> {
-  const database = await db();
-  const [row] = await database
-    .update(incidents)
-    .set({ priority })
-    .where(and(eq(incidents.id, incidentId), notDeleted))
-    .returning({ id: incidents.id });
-  if (!row) return { ok: false, error: "Incident introuvable." };
+  const done = await changeIncident(incidentId, "IncidentPrioritized", actorId, async (tx, before) => {
+    if (before.deleted) return null;
+    await tx.update(incidents).set({ priority }).where(eq(incidents.id, incidentId));
+    return { result: true, data: { priority, previous: before.priority } };
+  });
+  if (!done) return { ok: false, error: "Incident introuvable." };
   await logActivity({ actorId, action: "incident.priority", entityType: "incident", entityId: incidentId, metadata: { priority } });
   return { ok: true };
 }
 
 /** "1 intervention à la fois": guarded by a partial unique index. */
 export async function takeIncident(incidentId: string, heroId: string): Promise<MutationResult> {
-  const database = await db();
   try {
-    const [row] = await database
-      .update(incidents)
-      .set({ status: "IN_PROGRESS", heroId, interventionStartedAt: new Date() })
-      .where(and(eq(incidents.id, incidentId), eq(incidents.status, "REPORTED"), notDeleted))
-      .returning({ id: incidents.id });
-    if (!row) return { ok: false, error: "Cet incident est déjà pris en charge ou n'existe plus." };
+    const taken = await changeIncident(incidentId, "InterventionStarted", heroId, async (tx, before) => {
+      if (before.status !== "REPORTED" || before.deleted) return null;
+      // Offline replay: the intervention started when the hero tapped, not when the network came back.
+      await tx
+        .update(incidents)
+        .set({ status: "IN_PROGRESS", heroId, interventionStartedAt: actionTime() })
+        .where(eq(incidents.id, incidentId));
+      await tx.update(heroProfiles).set({ onDuty: true }).where(eq(heroProfiles.userId, heroId));
+      return { result: true, data: { heroId } };
+    });
+    if (!taken) return { ok: false, error: "Cet incident est déjà pris en charge ou n'existe plus." };
   } catch (error) {
     if (isUniqueViolation(error)) {
       return { ok: false, error: "Vous avez déjà une intervention en cours : terminez-la d'abord." };
     }
     throw error;
   }
-  await database.update(heroProfiles).set({ onDuty: true }).where(eq(heroProfiles.userId, heroId));
   await logActivity({ actorId: heroId, action: "incident.take", entityType: "incident", entityId: incidentId });
 
   const incident = (await getIncident(incidentId))!;
@@ -336,35 +342,35 @@ export async function closeIntervention(
   heroId: string,
   report: InterventionReport,
 ): Promise<MutationResult> {
-  const database = await db();
   const imprisoned = report.outcome === "SUCCEEDED" && report.villainImprisoned && report.villainId !== null;
-  const closed = await database.transaction(async (tx) => {
+  const closed = await changeIncident(incidentId, "InterventionClosed", heroId, async (tx, before) => {
+    if (before.status !== "IN_PROGRESS" || before.heroId !== heroId) return null;
+    const endedAt = actionTime();
     const [row] = await tx
       .update(incidents)
       .set({
         status: report.outcome,
-        interventionEndedAt: new Date(),
+        interventionEndedAt: endedAt,
         villainId: report.villainId,
         villainImprisoned: imprisoned,
         peopleInvolved: report.peopleInvolved,
       })
-      .where(and(eq(incidents.id, incidentId), eq(incidents.heroId, heroId), eq(incidents.status, "IN_PROGRESS")))
+      .where(eq(incidents.id, incidentId))
       .returning({ latitude: incidents.latitude, longitude: incidents.longitude });
-    if (!row) return false;
     if (imprisoned) {
       await tx
         .update(villains)
-        .set({ status: "IMPRISONED", imprisonedAt: new Date() })
+        .set({ status: "IMPRISONED", imprisonedAt: endedAt })
         .where(eq(villains.id, report.villainId!));
     }
     // The hero now stands where the intervention ended.
     if (row.latitude !== null && row.longitude !== null) {
       await tx
         .update(heroProfiles)
-        .set({ latitude: row.latitude, longitude: row.longitude, locationUpdatedAt: new Date() })
+        .set({ latitude: row.latitude, longitude: row.longitude, locationUpdatedAt: endedAt })
         .where(eq(heroProfiles.userId, heroId));
     }
-    return true;
+    return { result: true, data: { outcome: report.outcome, villainId: report.villainId, villainImprisoned: imprisoned, peopleInvolved: report.peopleInvolved } };
   });
   if (!closed) return { ok: false, error: "Aucune intervention en cours sur cet incident." };
 

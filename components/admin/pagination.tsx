@@ -23,14 +23,17 @@ export function Pagination({
   page,
   pageSize,
   total,
+  maxPages,
 }: {
   pathname: string;
   params: Params;
   page: number;
   pageSize: number;
   total: number;
+  /** Last page reachable (deep OFFSETs are slow): beyond, the filters narrow the list. */
+  maxPages?: number;
 }) {
-  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const pages = Math.max(1, Math.min(Math.ceil(total / pageSize), maxPages ?? Infinity));
   if (pages <= 1) return null;
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);

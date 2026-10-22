@@ -1,8 +1,10 @@
 import "server-only";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { heroMovies, heroProfiles, heroReviews, incidents, users } from "@/db/schema";
+import { heroMovies, heroProfiles, heroReviews, heroStats, heroVillainStats, incidents, users } from "@/db/schema";
 import type { HeroAvailability } from "@/lib/labels";
 import { db } from "../db";
+import { changeHero } from "../events/store";
+import { actionTime } from "../request-context";
 
 export type { HeroAvailability };
 
@@ -37,7 +39,7 @@ async function loadHeroes(heroId?: string): Promise<HeroContactDto[]> {
   const database = await db();
   const heroFilter = heroId ? eq(users.id, heroId) : undefined;
 
-  const [profiles, interventionStats, ratingStats, movieStats] = await Promise.all([
+  const [profiles, interventionStats, villainStats, activeInterventions, ratingStats, movieStats] = await Promise.all([
     database
       .select({
         id: users.id,
@@ -69,16 +71,32 @@ async function loadHeroes(heroId?: string): Promise<HeroContactDto[]> {
       .orderBy(heroProfiles.alias),
     database
       .select({
-        heroId: incidents.heroId,
-        interventions: sql<number>`count(*)::int`,
-        succeeded: sql<number>`count(*) filter (where ${incidents.status} = 'SUCCEEDED')::int`,
-        citizensSaved: sql<number>`coalesce(sum(${incidents.peopleInvolved}) filter (where ${incidents.status} = 'SUCCEEDED'), 0)::int`,
-        villainsImprisoned: sql<number>`count(distinct ${incidents.villainId}) filter (where ${incidents.villainImprisoned})::int`,
-        activeIncidentId: sql<string | null>`(array_agg(${incidents.id}::text) filter (where ${incidents.status} = 'IN_PROGRESS'))[1]`,
+        heroId: heroStats.heroId,
+        interventions: heroStats.interventions,
+        succeeded: heroStats.succeeded,
+        citizensSaved: heroStats.citizensSaved,
       })
+      .from(heroStats)
+      .where(heroId ? eq(heroStats.heroId, heroId) : undefined),
+    database
+      .select({
+        heroId: heroVillainStats.heroId,
+        villainsImprisoned: sql<number>`count(*) filter (where ${heroVillainStats.imprisonments} > 0)::int`,
+      })
+      .from(heroVillainStats)
+      .where(heroId ? eq(heroVillainStats.heroId, heroId) : undefined)
+      .groupBy(heroVillainStats.heroId),
+    // At most one per hero: incidents_one_active_intervention_per_hero.
+    database
+      .select({ heroId: incidents.heroId, activeIncidentId: incidents.id })
       .from(incidents)
-      .where(and(isNull(incidents.deletedAt), heroId ? eq(incidents.heroId, heroId) : undefined))
-      .groupBy(incidents.heroId),
+      .where(
+        and(
+          eq(incidents.status, "IN_PROGRESS"),
+          isNull(incidents.deletedAt),
+          heroId ? eq(incidents.heroId, heroId) : undefined,
+        ),
+      ),
     database
       .select({
         heroId: heroReviews.heroId,
@@ -98,13 +116,15 @@ async function loadHeroes(heroId?: string): Promise<HeroContactDto[]> {
   const byHero = <T extends { heroId: string | null }>(rows: T[]) =>
     new Map(rows.map((row) => [row.heroId, row]));
   const interventionsOf = byHero(interventionStats);
+  const villainsOf = byHero(villainStats);
+  const activeOf = byHero(activeInterventions);
   const ratingsOf = byHero(ratingStats);
   const moviesOf = byHero(movieStats);
 
   return profiles.map((profile) => {
     const stats = interventionsOf.get(profile.id);
     const ratings = ratingsOf.get(profile.id);
-    const activeIncidentId = stats?.activeIncidentId ?? null;
+    const activeIncidentId = activeOf.get(profile.id)?.activeIncidentId ?? null;
     return {
       id: profile.id,
       alias: profile.alias,
@@ -124,7 +144,7 @@ async function loadHeroes(heroId?: string): Promise<HeroContactDto[]> {
       interventions: stats?.interventions ?? 0,
       succeeded: stats?.succeeded ?? 0,
       citizensSaved: stats?.citizensSaved ?? 0,
-      villainsImprisoned: stats?.villainsImprisoned ?? 0,
+      villainsImprisoned: villainsOf.get(profile.id)?.villainsImprisoned ?? 0,
       rating: ratings?.rating ?? null,
       ratingCount: ratings?.ratingCount ?? 0,
       moviesCount: moviesOf.get(profile.id)?.moviesCount ?? 0,
@@ -152,14 +172,18 @@ export async function getHero(heroId: string): Promise<HeroContactDto | null> {
 }
 
 export async function setHeroOnDuty(heroId: string, onDuty: boolean): Promise<void> {
-  const database = await db();
-  await database.update(heroProfiles).set({ onDuty }).where(eq(heroProfiles.userId, heroId));
+  await changeHero(heroId, "HeroDutyChanged", async (tx) => {
+    await tx.update(heroProfiles).set({ onDuty }).where(eq(heroProfiles.userId, heroId));
+    return { onDuty };
+  });
 }
 
 export async function setHeroLocation(heroId: string, latitude: number, longitude: number): Promise<void> {
-  const database = await db();
-  await database
-    .update(heroProfiles)
-    .set({ latitude, longitude, locationUpdatedAt: new Date() })
-    .where(eq(heroProfiles.userId, heroId));
+  await changeHero(heroId, "HeroLocationUpdated", async (tx) => {
+    await tx
+      .update(heroProfiles)
+      .set({ latitude, longitude, locationUpdatedAt: actionTime() })
+      .where(eq(heroProfiles.userId, heroId));
+    return { latitude, longitude };
+  });
 }

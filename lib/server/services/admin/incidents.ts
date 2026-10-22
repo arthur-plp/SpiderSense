@@ -1,10 +1,11 @@
 import "server-only";
 import { and, asc, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
-import { heroProfiles, incidentTypes, incidents, users, villains } from "@/db/schema";
+import { heroProfiles, incidentCounts, incidentTypes, incidents, users, villains } from "@/db/schema";
 import { DUPLICATE_RADIUS_METERS, distanceInMeters, hasPosition } from "@/lib/geo";
 import type { IncidentPriority, IncidentStatus } from "@/lib/labels";
 import { logActivity } from "../../activity";
 import { db, isUniqueViolation } from "../../db";
+import { changeIncident } from "../../events/store";
 import { mailTemplates, queueMails } from "../../mail";
 import { getBaseUrl } from "../../url";
 import {
@@ -26,6 +27,8 @@ const STATUSES = ["REPORTED", "IN_PROGRESS", "SUCCEEDED", "FAILED"] as const;
 const PRIORITIES = ["HIGH", "NORMAL", "LOW"] as const;
 export const INCIDENT_SORTS = { recent: "Plus récents", oldest: "Plus anciens", priority: "Priorité" } as const;
 export const INCIDENTS_PAGE_SIZE = 40;
+/** OFFSET pagination stays fast up to 10 000 rows; beyond, the filters narrow the list. */
+export const INCIDENTS_MAX_PAGES = 250;
 
 export type IncidentFilters = {
   status: IncidentStatus | "ACTIVE" | null;
@@ -79,6 +82,37 @@ export type AdminIncidentRow = {
 // High first, then incidents nobody has prioritised yet (see PRIORITY_RANK).
 const priorityRank = sql`case when ${incidents.priority} = 'HIGH' then 0 when ${incidents.priority} is null then 1 when ${incidents.priority} = 'NORMAL' then 2 else 3 end`;
 
+/**
+ * Total for the list. Status, priority, type and deleted are the dimensions of
+ * the incident_counts projection: a sum over a few rows instead of counting
+ * millions. The villain filter isn't one: counted through its index, up to a cap.
+ */
+async function countAdminIncidents(filters: IncidentFilters, where: SQL | undefined): Promise<number> {
+  const database = await db();
+  if (filters.villainId) {
+    const [{ total }] = await database
+      .select({ total: sql<number>`count(*)::int` })
+      .from(database.select({ one: sql`1` }).from(incidents).where(where).limit(INCIDENTS_PAGE_SIZE * INCIDENTS_MAX_PAGES + 1).as("capped"));
+    return total;
+  }
+  const [{ total }] = await database
+    .select({ total: sql<number>`coalesce(sum(${incidentCounts.incidents}), 0)::int` })
+    .from(incidentCounts)
+    .where(
+      and(
+        filters.includeDeleted ? undefined : eq(incidentCounts.deleted, false),
+        filters.status === "ACTIVE"
+          ? inArray(incidentCounts.status, ["REPORTED", "IN_PROGRESS"])
+          : filters.status
+            ? eq(incidentCounts.status, filters.status)
+            : undefined,
+        filters.priority ? eq(incidentCounts.priority, filters.priority) : undefined,
+        filters.typeId ? eq(incidentCounts.typeId, filters.typeId) : undefined,
+      ),
+    );
+  return total;
+}
+
 export async function listAdminIncidents(filters: IncidentFilters): Promise<{ rows: AdminIncidentRow[]; total: number }> {
   const database = await db();
   const conditions: (SQL | undefined)[] = [
@@ -104,7 +138,8 @@ export async function listAdminIncidents(filters: IncidentFilters): Promise<{ ro
         ? [priorityRank, desc(incidents.createdAt)]
         : [desc(incidents.createdAt)];
 
-  const [rows, [{ total }]] = await Promise.all([
+  const page = Math.min(filters.page, INCIDENTS_MAX_PAGES);
+  const [rows, total] = await Promise.all([
     database
       .select({
         id: incidents.id,
@@ -137,8 +172,8 @@ export async function listAdminIncidents(filters: IncidentFilters): Promise<{ ro
       .where(where)
       .orderBy(...order)
       .limit(INCIDENTS_PAGE_SIZE)
-      .offset((filters.page - 1) * INCIDENTS_PAGE_SIZE),
-    database.select({ total: sql<number>`count(*)::int` }).from(incidents).where(where),
+      .offset((page - 1) * INCIDENTS_PAGE_SIZE),
+    countAdminIncidents(filters, where),
   ]);
 
   return {
@@ -307,19 +342,20 @@ export async function updateIncidentAsModerator(
   input: IncidentEdit,
   actorId: string,
 ): Promise<MutationResult & { changed?: string[] }> {
-  const database = await db();
-  const [current] = await database
-    .select()
-    .from(incidents)
-    .where(and(eq(incidents.id, incidentId), isNull(incidents.deletedAt)));
-  if (!current) return { ok: false, error: "Cet incident n'existe plus ou a été supprimé." };
-
-  // The arrest recorded by the hero refers to this villain: the link stays.
-  const next: IncidentEdit = current.villainImprisoned ? { ...input, villainId: current.villainId } : input;
-  const changedKeys = (Object.keys(next) as (keyof IncidentEdit)[]).filter((key) => next[key] !== current[key]);
+  const edit = await changeIncident(incidentId, "IncidentCorrected", actorId, async (tx, before) => {
+    if (before.deleted) return null;
+    const [current] = await tx.select().from(incidents).where(eq(incidents.id, incidentId));
+    // The arrest recorded by the hero refers to this villain: the link stays.
+    const next: IncidentEdit = current.villainImprisoned ? { ...input, villainId: current.villainId } : input;
+    const keys = (Object.keys(next) as (keyof IncidentEdit)[]).filter((key) => next[key] !== current[key]);
+    if (keys.length === 0) return { result: { keys, next }, unchanged: true };
+    await tx.update(incidents).set(next).where(eq(incidents.id, incidentId));
+    return { result: { keys, next }, data: { fields: keys } };
+  });
+  if (!edit) return { ok: false, error: "Cet incident n'existe plus ou a été supprimé." };
+  const { keys: changedKeys, next } = edit;
   if (changedKeys.length === 0) return { ok: true, changed: [] };
 
-  await database.update(incidents).set(next).where(eq(incidents.id, incidentId));
   const changed = [...new Set(changedKeys.map((key) => FIELD_LABELS[key]))];
   await logActivity({
     actorId,
@@ -334,13 +370,12 @@ export async function updateIncidentAsModerator(
 
 /** Soft delete: the reporter keeps the incident in his history and is told why. */
 export async function deleteIncidentAsModerator(incidentId: string, reason: string, actorId: string): Promise<MutationResult> {
-  const database = await db();
-  const [row] = await database
-    .update(incidents)
-    .set({ deletedAt: new Date(), deletedBy: actorId })
-    .where(and(eq(incidents.id, incidentId), isNull(incidents.deletedAt)))
-    .returning({ id: incidents.id });
-  if (!row) return { ok: false, error: "Cet incident a déjà été supprimé." };
+  const deleted = await changeIncident(incidentId, "IncidentDeleted", actorId, async (tx, before) => {
+    if (before.deleted) return null;
+    await tx.update(incidents).set({ deletedAt: new Date(), deletedBy: actorId }).where(eq(incidents.id, incidentId));
+    return { result: true, data: { reason } };
+  });
+  if (!deleted) return { ok: false, error: "Cet incident a déjà été supprimé." };
   await logActivity({ actorId, action: "incident.delete", entityType: "incident", entityId: incidentId, metadata: { reason } });
   await notifyReporter(incidentId, actorId, true, reason);
   return { ok: true };
@@ -384,7 +419,12 @@ export async function createVillainFromReport(
     }
   }
 
-  await database.update(incidents).set({ villainId }).where(eq(incidents.id, incidentId));
+  const linked = await changeIncident(incidentId, "IncidentVillainLinked", actorId, async (tx, before) => {
+    if (before.deleted || before.villainId) return null;
+    await tx.update(incidents).set({ villainId }).where(eq(incidents.id, incidentId));
+    return { result: true, data: { villainId, created } };
+  });
+  if (!linked) return { ok: false, error: "Un vilain est déjà lié à cet incident." };
   if (created) {
     await logActivity({ actorId, action: "villain.create", entityType: "villain", entityId: villainId, metadata: { alias } });
   }
