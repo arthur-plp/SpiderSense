@@ -2,36 +2,892 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Spider Sense API",
-    "version": "0.1.0",
-    "description": "Documentation de l'API Spider Sense."
+    "version": "0.2.0",
+    "description": "Endpoints HTTP de la plateforme Spider Sense.\n\nCes routes servent surtout aux cartes temps réel (interrogées régulièrement par le front) et aux champs de recherche. Les autres opérations (inscription, connexion, déclaration d'incident, modération…) passent par des **Server Actions** Next.js et ne sont pas des endpoints HTTP : elles sont décrites dans la documentation Docusaurus.\n\n**Authentification** : cookie de session `spidersense_session` (HttpOnly, SameSite=Lax), posé à la connexion sur `/connexion`. Pour tester ici, connectez-vous d'abord dans le même navigateur.\n\n**Erreurs** : `{ \"error\": \"message en français\" }`."
   },
-  "servers": [{ "url": "/" }],
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "sessionCookie": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Temps réel",
+      "description": "Données des cartes héros et citoyen."
+    },
+    {
+      "name": "Recherche",
+      "description": "Géocodage (OpenStreetMap Nominatim) et recherche IMDb."
+    },
+    {
+      "name": "Médias",
+      "description": "Fichiers stockés en base."
+    }
+  ],
   "paths": {
-    "/api/health": {
+    "/api/incidents": {
       "get": {
-        "summary": "Vérifie que l'API répond",
-        "tags": ["Système"],
+        "operationId": "listIncidents",
+        "tags": [
+          "Temps réel"
+        ],
+        "summary": "Incidents en cours",
+        "description": "Incidents actifs (`REPORTED`, `IN_PROGRESS`), interrogés en boucle par les cartes.\n\n- **Héros et modérateurs** : reçoivent aussi les incidents terminés depuis moins de 24 h, avec `reporterId` toujours renseigné.\n- **Citoyens** : `reporterId` n'est renseigné que sur leurs propres signalements, `null` sinon.\n\nJamais mise en cache (`Cache-Control: no-store`).",
         "responses": {
           "200": {
-            "description": "L'API est opérationnelle",
+            "description": "Incidents visibles par l'utilisateur",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Health" }
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "serverTime",
+                    "incidents"
+                  ],
+                  "properties": {
+                    "serverTime": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Heure du serveur, pour calculer les durées sans dépendre de l'horloge du client"
+                    },
+                    "incidents": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Incident"
+                      }
+                    }
+                  }
+                }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/heroes": {
+      "get": {
+        "operationId": "listHeroes",
+        "tags": [
+          "Temps réel"
+        ],
+        "summary": "Super-héros validés",
+        "description": "Héros au profil approuvé, avec position, disponibilité et statistiques (sans email ni téléphone).\n\nJamais mise en cache (`Cache-Control: no-store`).",
+        "responses": {
+          "200": {
+            "description": "Liste des héros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "heroes"
+                  ],
+                  "properties": {
+                    "heroes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Hero"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/geocode/search": {
+      "get": {
+        "operationId": "searchAddress",
+        "tags": [
+          "Recherche"
+        ],
+        "summary": "Suggestions d'adresses",
+        "description": "Jusqu'à 5 adresses en France correspondant à la saisie. Moins de 3 caractères : liste vide. La saisie est tronquée à 200 caractères.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            },
+            "example": "10 rue de Rivoli"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suggestions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "results"
+                  ],
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Address"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "502": {
+            "description": "Nominatim injoignable (`results` vide)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Address"
+                      }
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Service de géocodage indisponible"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/geocode/reverse": {
+      "get": {
+        "operationId": "reverseGeocode",
+        "tags": [
+          "Recherche"
+        ],
+        "summary": "Adresse d'une position",
+        "description": "Adresse la plus proche des coordonnées, pour préremplir le lieu d'un incident à partir du GPS.",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "example": 48.8566
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "example": 2.3522
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Adresse trouvée, ou `null` si aucune",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "address"
+                  ],
+                  "properties": {
+                    "address": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/Address"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`lat` ou `lng` absent ou hors limites",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Coordonnées invalides"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "502": {
+            "description": "Nominatim injoignable (`address` à `null`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "null"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Service de géocodage indisponible"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imdb/search": {
+      "get": {
+        "operationId": "searchImdb",
+        "tags": [
+          "Recherche"
+        ],
+        "summary": "Recherche de titres IMDb",
+        "description": "Recherche de films et séries pour qu'un héros ajoute ses apparitions à sa filmographie. Réservé aux **héros validés** et aux **modérateurs / admins**. Moins de 2 caractères : liste vide. La saisie est tronquée à 100 caractères.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            },
+            "example": "Spider-Man"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Titres trouvés",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "results"
+                  ],
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ImdbTitle"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Non connecté, ou ni héros ni modérateur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Accès réservé"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "IMDb injoignable (`results` vide)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ImdbTitle"
+                      }
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "IMDb est injoignable pour le moment."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/avatars/{userId}": {
+      "get": {
+        "operationId": "getAvatar",
+        "tags": [
+          "Médias"
+        ],
+        "summary": "Photo de profil",
+        "description": "Image envoyée par l'utilisateur depuis son compte. **Publique** : pas besoin d'être connecté. Le front ajoute une version (`?v=…`) qui change à chaque envoi, d'où un cache d'un an (`Cache-Control: public, max-age=31536000, immutable`).",
+        "security": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "v",
+            "in": "query",
+            "required": false,
+            "description": "Version de l'image, ignorée par le serveur (sert seulement à invalider le cache)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "L'image, avec son type MIME d'origine",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Identifiant invalide, ou pas de photo pour cet utilisateur (corps vide)"
           }
         }
       }
     }
   },
   "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "spidersense_session",
+        "description": "Posé à la connexion (page `/connexion`)."
+      }
+    },
+    "responses": {
+      "Unauthenticated": {
+        "description": "Pas de session valide",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Non authentifié"
+            }
+          }
+        }
+      }
+    },
     "schemas": {
-      "Health": {
+      "Error": {
         "type": "object",
-        "required": ["status", "timestamp"],
+        "required": [
+          "error"
+        ],
         "properties": {
-          "status": { "type": "string", "example": "ok" },
-          "timestamp": { "type": "string", "format": "date-time" }
+          "error": {
+            "type": "string",
+            "description": "Message en français, affichable tel quel"
+          }
+        }
+      },
+      "IncidentStatus": {
+        "type": "string",
+        "enum": [
+          "REPORTED",
+          "IN_PROGRESS",
+          "SUCCEEDED",
+          "FAILED"
+        ],
+        "description": "`REPORTED` signalé, `IN_PROGRESS` un héros intervient, `SUCCEEDED` / `FAILED` intervention terminée"
+      },
+      "IncidentPriority": {
+        "type": "string",
+        "enum": [
+          "HIGH",
+          "NORMAL",
+          "LOW"
+        ]
+      },
+      "HeroAvailability": {
+        "type": "string",
+        "enum": [
+          "AVAILABLE",
+          "BUSY",
+          "OFF_DUTY"
+        ],
+        "description": "`BUSY` : intervention en cours ; `OFF_DUTY` : hors service"
+      },
+      "Incident": {
+        "type": "object",
+        "required": [
+          "id",
+          "typeId",
+          "typeCode",
+          "typeLabel",
+          "endangersCitizens",
+          "status",
+          "priority",
+          "description",
+          "occurredAt",
+          "createdAt",
+          "street",
+          "postalCode",
+          "city",
+          "country",
+          "latitude",
+          "longitude",
+          "peopleInvolved",
+          "reportedVillainName",
+          "villain",
+          "hero",
+          "reporterId",
+          "interventionStartedAt",
+          "interventionEndedAt",
+          "villainImprisoned",
+          "deletedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeId": {
+            "type": "integer"
+          },
+          "typeCode": {
+            "type": "string"
+          },
+          "typeLabel": {
+            "type": "string",
+            "example": "Vol"
+          },
+          "endangersCitizens": {
+            "type": "boolean",
+            "description": "Le type compte dans les « citoyens en danger secourus »"
+          },
+          "status": {
+            "$ref": "#/components/schemas/IncidentStatus"
+          },
+          "priority": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/IncidentPriority"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`null` tant qu'un héros ou un modérateur ne l'a pas fixée"
+          },
+          "description": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "street": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "peopleInvolved": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reportedVillainName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Vilain nommé par le citoyen, avant rattachement à une fiche"
+          },
+          "villain": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "id",
+                  "alias",
+                  "imprisoned"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "alias": {
+                    "type": "string"
+                  },
+                  "imprisoned": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hero": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "id",
+                  "alias"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "alias": {
+                    "type": "string",
+                    "example": "Spider-Man"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Héros qui intervient ou est intervenu"
+          },
+          "reporterId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Auteur du signalement. Pour un citoyen, renseigné uniquement sur ses propres incidents"
+          },
+          "interventionStartedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "interventionEndedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "villainImprisoned": {
+            "type": "boolean"
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Hero": {
+        "type": "object",
+        "required": [
+          "id",
+          "alias",
+          "firstName",
+          "lastName",
+          "avatarUrl",
+          "bio",
+          "powers",
+          "onDuty",
+          "latitude",
+          "longitude",
+          "locationUpdatedAt",
+          "availability",
+          "activeIncidentId",
+          "interventions",
+          "succeeded",
+          "citizensSaved",
+          "villainsImprisoned",
+          "rating",
+          "ratingCount",
+          "moviesCount",
+          "memberSince"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alias": {
+            "type": "string",
+            "example": "Spider-Man"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "URL de `/api/avatars/{userId}`, versionnée"
+          },
+          "bio": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "powers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "onDuty": {
+            "type": "boolean"
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "locationUpdatedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "availability": {
+            "$ref": "#/components/schemas/HeroAvailability"
+          },
+          "activeIncidentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "interventions": {
+            "type": "integer"
+          },
+          "succeeded": {
+            "type": "integer"
+          },
+          "citizensSaved": {
+            "type": "integer"
+          },
+          "villainsImprisoned": {
+            "type": "integer"
+          },
+          "rating": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Moyenne des avis visibles (1 à 5), `null` sans avis"
+          },
+          "ratingCount": {
+            "type": "integer"
+          },
+          "moviesCount": {
+            "type": "integer",
+            "description": "Films validés par la modération"
+          },
+          "memberSince": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "required": [
+          "street",
+          "postalCode",
+          "city",
+          "country",
+          "label",
+          "lat",
+          "lng"
+        ],
+        "properties": {
+          "street": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "10 Rue de Rivoli"
+          },
+          "postalCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "75004"
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Paris"
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "France"
+          },
+          "label": {
+            "type": "string",
+            "description": "Adresse complète, affichable"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        }
+      },
+      "ImdbTitle": {
+        "type": "object",
+        "required": [
+          "imdbId",
+          "title",
+          "year",
+          "posterUrl",
+          "cast",
+          "kind"
+        ],
+        "properties": {
+          "imdbId": {
+            "type": "string",
+            "example": "tt0145487"
+          },
+          "title": {
+            "type": "string",
+            "example": "Spider-Man"
+          },
+          "year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 2002
+          },
+          "posterUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "cast": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Tobey Maguire, Kirsten Dunst"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Type de titre tel qu'IMDb l'affiche",
+            "example": "feature"
+          }
         }
       }
     }
