@@ -12,7 +12,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx scripts/db-seed.ts"
+    "db:seed": "tsx scripts/db-seed.ts",
+    "services:up": "docker compose up -d db mailpit",
+    "services:down": "docker compose stop db mailpit",
+    "docs": "npm --prefix docusaurus start -- --port 3001"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.10",

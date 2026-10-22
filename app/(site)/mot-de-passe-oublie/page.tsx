@@ -7,7 +7,7 @@ import { ForgotPasswordForm } from "@/components/site/forgot-password-form";
 import { accountPathFor } from "@/components/site/routes";
 import { FormSkeleton } from "@/components/site/skeleton";
 import { getCurrentUser } from "@/lib/server/auth";
-import { isMailboxEnabled } from "@/lib/server/services/mailbox";
+import { getMailboxHref } from "@/lib/server/services/mailbox";
 
 export const metadata: Metadata = { title: "Mot de passe oublié" };
 
@@ -29,5 +29,5 @@ export default function ForgotPasswordPage() {
 async function ForgotPasswordContent() {
   const user = await getCurrentUser();
   if (user) redirect(accountPathFor(user));
-  return <ForgotPasswordForm mailboxHref={isMailboxEnabled() ? "/dev/mails" : null} />;
+  return <ForgotPasswordForm mailboxHref={getMailboxHref()} />;
 }

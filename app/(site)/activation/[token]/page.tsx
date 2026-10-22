@@ -6,7 +6,7 @@ import { ConfirmActionForm } from "@/components/site/confirm-action-form";
 import { ResendActivationForm } from "@/components/site/resend-activation-form";
 import { FormSkeleton } from "@/components/site/skeleton";
 import { activateAccount } from "@/lib/actions/auth";
-import { isMailboxEnabled } from "@/lib/server/services/mailbox";
+import { getMailboxHref } from "@/lib/server/services/mailbox";
 
 export const metadata: Metadata = { title: "Activation du compte", robots: { index: false } };
 
@@ -35,7 +35,7 @@ async function ActivationContent({ params }: Pick<PageProps<"/activation/[token]
       errorContent={
         <div className="space-y-3 border-t border-white/10 pt-5">
           <h2 className="text-sm font-semibold text-white">Recevoir un nouveau lien</h2>
-          <ResendActivationForm mailboxHref={isMailboxEnabled() ? "/dev/mails" : null} />
+          <ResendActivationForm mailboxHref={getMailboxHref()} />
         </div>
       }
     />

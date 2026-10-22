@@ -15,6 +15,16 @@ export function isMailboxEnabled(): boolean {
   );
 }
 
+/**
+ * Target of the "open the demo mailbox" links: the in-app mailbox, or the
+ * Mailpit UI when mails go through SMTP and MAILPIT_URL is set (development only).
+ */
+export function getMailboxHref(to?: string | null): string | null {
+  if (isMailboxEnabled()) return to ? `/dev/mails?to=${encodeURIComponent(to)}` : "/dev/mails";
+  const mailpitUrl = process.env.MAILPIT_URL;
+  return mailpitUrl && process.env.NODE_ENV !== "production" ? mailpitUrl : null;
+}
+
 export type MailboxEntry = { id: string; to: string; subject: string; createdAt: string };
 export type MailboxMessage = MailboxEntry & { html: string; text: string };
 export type MailboxRecipient = { email: string; count: number };

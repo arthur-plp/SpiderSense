@@ -7,7 +7,7 @@ import { Notice } from "@/components/site/notice";
 import { firstParam } from "@/components/site/params";
 import { FormSkeleton } from "@/components/site/skeleton";
 import { redirectIfSignedIn } from "@/lib/server/auth";
-import { isMailboxEnabled } from "@/lib/server/services/mailbox";
+import { getMailboxHref } from "@/lib/server/services/mailbox";
 import { safeRedirectPath } from "@/lib/server/url";
 
 export const metadata: Metadata = {
@@ -48,7 +48,7 @@ async function LoginContent({ searchParams }: Pick<PageProps<"/connexion">, "sea
         </Notice>
       )}
       {next && <Notice tone="info">Connectez-vous pour accéder à cette page.</Notice>}
-      <LoginForm next={next} showDemoAccounts={demoDataSeeded()} mailboxHref={isMailboxEnabled() ? "/dev/mails" : null} />
+      <LoginForm next={next} showDemoAccounts={demoDataSeeded()} mailboxHref={getMailboxHref()} />
     </div>
   );
 }

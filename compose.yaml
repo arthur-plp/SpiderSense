@@ -6,9 +6,19 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-spidersense}:${POSTGRES_PASSWORD:-spidersense}@db:5432/${POSTGRES_DB:-spidersense}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      SMTP_URL: smtp://mailpit:1025
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
+
+  # Catches every outgoing mail in development: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
     restart: unless-stopped
 
   db:

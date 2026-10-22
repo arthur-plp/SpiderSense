@@ -7,7 +7,7 @@ import { firstParam } from "@/components/site/params";
 import { ResendActivationForm } from "@/components/site/resend-activation-form";
 import { FormSkeleton } from "@/components/site/skeleton";
 import { LinkButton } from "@/components/ui/button";
-import { isMailboxEnabled } from "@/lib/server/services/mailbox";
+import { getMailboxHref } from "@/lib/server/services/mailbox";
 
 export const metadata: Metadata = { title: "Vérifiez votre boîte mail", robots: { index: false } };
 
@@ -36,7 +36,7 @@ export default function RegistrationConfirmationPage({ searchParams }: PageProps
 async function ConfirmationContent({ searchParams }: Pick<PageProps<"/inscription/confirmation">, "searchParams">) {
   const raw = firstParam((await searchParams).email);
   const email = raw && raw.length <= 255 && raw.includes("@") ? raw : null;
-  const mailboxHref = isMailboxEnabled() ? `/dev/mails${email ? `?to=${encodeURIComponent(email)}` : ""}` : null;
+  const mailboxHref = getMailboxHref(email);
 
   return (
     <div className="space-y-6">
