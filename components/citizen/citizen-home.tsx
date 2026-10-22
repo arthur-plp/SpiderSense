@@ -43,8 +43,14 @@ type HeroSort = "distance" | "rating" | "interventions";
 export function CitizenHome({ user, initialIncidents, initialHeroes, types, rateableCount, homeAddress }: CitizenHomeProps) {
   const router = useRouter();
   const geo = useGeolocation();
-  const incidents = useLiveResource("/api/incidents", initialIncidents, (body) => (body as { incidents: IncidentDto[] }).incidents, 15_000);
-  const heroes = useLiveResource("/api/heroes", initialHeroes, (body) => (body as { heroes: HeroDto[] }).heroes, 20_000);
+  const incidents = useLiveResource("/api/incidents", initialIncidents, (body) => (body as { incidents: IncidentDto[] }).incidents, {
+    intervalMs: 15_000,
+    live: ["incident"],
+  });
+  const heroes = useLiveResource("/api/heroes", initialHeroes, (body) => (body as { heroes: HeroDto[] }).heroes, {
+    intervalMs: 20_000,
+    live: ["hero", "incident"],
+  });
   const [sosOpen, setSosOpen] = useState(false);
   const [sheet, setSheet] = useState<SheetSnap>("peek");
   const [preview, setPreview] = useState<IncidentDto | null>(null);
