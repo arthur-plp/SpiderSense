@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { IncidentCreateForm } from "@/components/admin/incident-form";
 import { PageHeader } from "@/components/ui/panel";
-import { createIncidentAction } from "@/lib/actions/admin/incidents";
 import { requireStaff } from "@/lib/server/auth";
 import { listIncidentTypes } from "@/lib/server/services/incidents";
 
@@ -23,7 +22,7 @@ export default async function NewIncidentPage() {
         title="Signaler un incident"
         description="Vous déclarez l'incident en votre nom, comme un citoyen. Les super-héros et les modérateurs sont prévenus immédiatement ; vous pouvez fixer la priorité dès maintenant."
       />
-      <IncidentCreateForm action={createIncidentAction} types={types.map((type) => ({ id: type.id, label: type.label }))} />
+      <IncidentCreateForm endpoint={{ method: "POST", path: "/api/incidents", redirectTo: "/admin/incidents/{id}" }} types={types.map((type) => ({ id: type.id, label: type.label }))} />
     </>
   );
 }

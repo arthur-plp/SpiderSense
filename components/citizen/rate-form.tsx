@@ -1,15 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
 import { FormMessage, Textarea } from "@/components/ui/form";
 import { StarInput } from "@/components/ui/star-input";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { rateIntervention } from "@/lib/actions/incidents";
+import { useApiForm } from "@/lib/use-api-form";
 
 /** Satisfaction form (6.1.3): rating out of 5 and an optional comment. */
 export function RateForm({ incidentId, heroAlias }: { incidentId: string; heroAlias: string }) {
-  const [state, action] = useActionState(rateIntervention.bind(null, incidentId), idleState);
+  const [state, action] = useApiForm({ method: "POST", path: `/api/incidents/${incidentId}/review` });
   if (state.status === "success") return <FormMessage state={state} />;
   return (
     <form action={action} className="flex flex-col gap-3">

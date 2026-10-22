@@ -142,3 +142,27 @@ export function parsePowers(value: unknown): string[] {
   if (typeof value !== "string") return [];
   return [...new Set(value.split(/[,\n]/).map((power) => power.trim()).filter(Boolean))].slice(0, 8);
 }
+
+const isHttpUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+/** Optional image / cover URL: only http(s), so no javascript: or data: payloads. */
+export const optionalHttpUrl = optionalText(2000).refine(
+  (value) => value === null || isHttpUrl(value),
+  "Adresse web invalide (elle doit commencer par http:// ou https://).",
+);
+
+/** Checkbox group from a form (one value) or a JSON client (an array): the positive integer ids. */
+export const idListSchema = z
+  .union([z.string(), z.array(z.union([z.string(), z.number()]))])
+  .optional()
+  .transform((value) => {
+    const items = value === undefined ? [] : Array.isArray(value) ? value : [value];
+    return [...new Set(items.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+  });

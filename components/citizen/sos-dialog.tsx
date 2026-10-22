@@ -2,12 +2,13 @@
 
 import { CircleCheck, LoaderCircle, MapPin, Minus, Plus, TriangleAlert, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { IncidentIcon } from "@/components/ui/incident-icon";
 import { RelativeTime } from "@/components/ui/relative-time";
-import { findNearbyActiveIncidents, type SosResult, sendSosAlert } from "@/lib/actions/incidents";
+import { apiRequest, formDataToBody } from "@/lib/api-client";
 import { formatDistance, type LatLng } from "@/lib/geo";
 import type { IncidentDto } from "@/lib/server/services/incidents";
 
@@ -25,7 +26,10 @@ type SosDialogProps = {
   fallbackAddress: Address;
 };
 
-type Step = { name: "form" } | { name: "sending" } | { name: "sent"; result: Extract<SosResult, { ok: true }> } | { name: "error"; message: string };
+type SosSent = { incidentId: string; heroesAvailable: number };
+type Nearby = IncidentDto & { distance: number };
+
+type Step = { name: "form" } | { name: "sending" } | { name: "sent"; result: SosSent } | { name: "error"; message: string };
 
 /** Confirmation step of the buzzer: what, how many people, where — then send. */
 export function SosDialog({ open, onClose, onSent, types, position, precise, fallbackAddress }: SosDialogProps) {
@@ -35,7 +39,8 @@ export function SosDialog({ open, onClose, onSent, types, position, precise, fal
   const [details, setDetails] = useState("");
   const [villain, setVillain] = useState("");
   const [address, setAddress] = useState<Address | null>(null);
-  const [nearby, setNearby] = useState<(IncidentDto & { distance: number })[]>([]);
+  const [nearby, setNearby] = useState<Nearby[]>([]);
+  const router = useRouter();
   const dialogRef = useRef<HTMLDivElement>(null);
   const positionKey = position ? `${position.lat.toFixed(4)},${position.lng.toFixed(4)}` : null;
 
@@ -47,7 +52,9 @@ export function SosDialog({ open, onClose, onSent, types, position, precise, fal
       .then((response) => response.json() as Promise<{ address: Address | null }>)
       .then((body) => !cancelled && setAddress(body.address))
       .catch(() => undefined);
-    findNearbyActiveIncidents(position.lat, position.lng).then((list) => !cancelled && setNearby(list));
+    apiRequest<{ incidents: Nearby[] }>("GET", `/api/incidents/nearby?lat=${position.lat}&lng=${position.lng}`).then(
+      (result) => !cancelled && result.ok && setNearby(result.data.incidents),
+    );
     return () => {
       cancelled = true;
     };
@@ -87,17 +94,16 @@ export function SosDialog({ open, onClose, onSent, types, position, precise, fal
     data.set("postalCode", where.postalCode ?? "");
     data.set("city", where.city ?? "");
     data.set("country", where.country ?? "France");
-    try {
-      const result = await sendSosAlert(data);
-      if (result.ok) {
-        navigator.vibrate?.([80, 40, 80]);
-        setStep({ name: "sent", result });
-        onSent(result.incidentId);
-      } else {
-        setStep({ name: "error", message: result.error });
-      }
-    } catch {
+    const result = await apiRequest<{ id: string; heroesAvailable: number }>("POST", "/api/incidents", formDataToBody(data));
+    if (result.ok) {
+      navigator.vibrate?.([80, 40, 80]);
+      setStep({ name: "sent", result: { incidentId: result.data.id, heroesAvailable: result.data.heroesAvailable } });
+      onSent(result.data.id);
+      router.refresh();
+    } else if (result.status === 0) {
       setStep({ name: "error", message: "Connexion impossible. Si le danger est immédiat, appelez le 112." });
+    } else {
+      setStep({ name: "error", message: result.status === 400 ? "Alerte incomplète : vérifiez le type et le lieu." : result.error });
     }
   };
 

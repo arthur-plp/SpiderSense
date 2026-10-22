@@ -9,7 +9,6 @@ import { LinkButton } from "@/components/ui/button";
 import { IncidentIcon } from "@/components/ui/incident-icon";
 import { EmptyState, PageHeader, Panel, SectionTitle, StatTile } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
-import { setIncidentPriorityAction } from "@/lib/actions/admin/incidents";
 import { formatNumber } from "@/lib/format";
 import { requireStaff } from "@/lib/server/auth";
 import { listRecentActivity } from "@/lib/server/services/admin/activity";
@@ -146,7 +145,7 @@ export default async function AdminOverviewPage() {
                         <StatusBadge status={incident.status} />
                       </p>
                     </div>
-                    <PrioritySelect action={setIncidentPriorityAction.bind(null, incident.id)} priority={incident.priority} />
+                    <PrioritySelect endpoint={{ method: "PATCH", path: `/api/incidents/${incident.id}/priority` }} priority={incident.priority} />
                   </li>
                 ))}
               </ul>

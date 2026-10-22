@@ -1,24 +1,24 @@
 "use client";
 
-import { useActionState } from "react";
 import { FormMessage, Select } from "@/components/ui/form";
-import { type ActionState, idleState } from "@/lib/action-state";
+import type { ApiEndpoint } from "@/lib/api-client";
 import { ROLE_LABELS, type Role } from "@/lib/labels";
+import { useApiForm } from "@/lib/use-api-form";
 import { ConfirmSubmit } from "./confirm-submit";
 
 /** Promote / demote an account (administrators only). */
 export function RoleForm({
-  action,
+  endpoint,
   role,
   roles,
   userName,
 }: {
-  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  endpoint: ApiEndpoint;
   role: Role;
   roles: Role[];
   userName: string;
 }) {
-  const [state, formAction] = useActionState(action, idleState);
+  const [state, formAction] = useApiForm(endpoint);
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-2">

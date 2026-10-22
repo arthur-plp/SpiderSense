@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Field, FormMessage, Input, Select } from "@/components/ui/form";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { type ActionState, idleState } from "@/lib/action-state";
+import type { ApiEndpoint } from "@/lib/api-client";
+import { useApiForm } from "@/lib/use-api-form";
 import { slugify } from "./slug";
 
 export type ArticleFormDefaults = {
@@ -16,13 +17,13 @@ export type ArticleFormDefaults = {
 };
 
 export function ArticleForm({
-  action,
+  endpoint,
   article,
 }: {
-  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  endpoint: ApiEndpoint;
   article?: ArticleFormDefaults;
 }) {
-  const [state, formAction] = useActionState(action, idleState);
+  const [state, formAction] = useApiForm(endpoint);
   const errors = state.fieldErrors ?? {};
   const values = state.values;
   const [title, setTitle] = useState(values?.title ?? article?.title ?? "");

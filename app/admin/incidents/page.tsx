@@ -11,7 +11,6 @@ import { Checkbox, Select } from "@/components/ui/form";
 import { IncidentIcon } from "@/components/ui/incident-icon";
 import { EmptyState, PageHeader } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
-import { setIncidentPriorityAction } from "@/lib/actions/admin/incidents";
 import { formatDistance } from "@/lib/geo";
 import { pluralize } from "@/lib/format";
 import { type IncidentPriority, PRIORITY_LABELS, STATUS_LABELS, type IncidentStatus } from "@/lib/labels";
@@ -187,7 +186,7 @@ export default async function AdminIncidentsPage({ searchParams }: PageProps<"/a
                   <Td>
                     {active ? (
                       <PrioritySelect
-                        action={setIncidentPriorityAction.bind(null, incident.id)}
+                        endpoint={{ method: "PATCH", path: `/api/incidents/${incident.id}/priority` }}
                         priority={incident.priority}
                         label={`Priorité de l'incident ${incident.typeLabel} à ${incident.city}`}
                       />

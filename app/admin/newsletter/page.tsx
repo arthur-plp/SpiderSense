@@ -5,7 +5,6 @@ import { DataTable, Td, Th, Tr } from "@/components/admin/data-table";
 import { NewsletterForm } from "@/components/admin/newsletter-form";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, PageHeader, Panel, SectionTitle, StatTile } from "@/components/ui/panel";
-import { sendNewsletterAction } from "@/lib/actions/admin/newsletter";
 import { formatDateTime, formatNumber, formatShortDate, pluralize } from "@/lib/format";
 import { requireStaff } from "@/lib/server/auth";
 import { listNewsletterHistory, listSubscribers } from "@/lib/server/services/admin/newsletter";
@@ -29,7 +28,7 @@ export default async function AdminNewsletterPage() {
         <Panel className="p-5 sm:p-6">
           <SectionTitle>Nouvelle newsletter</SectionTitle>
           <NewsletterForm
-            action={sendNewsletterAction}
+            endpoint={{ method: "POST", path: "/api/admin/newsletters" }}
             subscribers={enabled.map((subscriber) => ({ id: subscriber.id, email: subscriber.email, name: subscriber.user?.name ?? null }))}
           />
         </Panel>

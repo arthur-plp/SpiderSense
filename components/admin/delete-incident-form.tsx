@@ -1,9 +1,9 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { useActionState } from "react";
 import { Field, FormMessage, Select, Textarea } from "@/components/ui/form";
-import { type ActionState, idleState } from "@/lib/action-state";
+import type { ApiEndpoint } from "@/lib/api-client";
+import { useApiForm } from "@/lib/use-api-form";
 import { ConfirmSubmit } from "./confirm-submit";
 
 const REASONS = [
@@ -15,15 +15,15 @@ const REASONS = [
 
 /** Soft delete with a reason; the reporter receives it by email. */
 export function DeleteIncidentForm({
-  action,
+  endpoint,
   inProgress,
   defaultReason = "DUPLICATE",
 }: {
-  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  endpoint: ApiEndpoint;
   inProgress: boolean;
   defaultReason?: string;
 }) {
-  const [state, formAction] = useActionState(action, idleState);
+  const [state, formAction] = useApiForm(endpoint);
   const errors = state.fieldErrors ?? {};
   const fieldError = errors.reason?.[0] ?? errors.details?.[0];
   return (

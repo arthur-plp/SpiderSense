@@ -1,21 +1,21 @@
 "use client";
 
 import { Send } from "lucide-react";
-import { useActionState } from "react";
 import { Field, FormMessage, Input, Select } from "@/components/ui/form";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { type ActionState, idleState } from "@/lib/action-state";
+import type { ApiEndpoint } from "@/lib/api-client";
 import { pluralize } from "@/lib/format";
+import { useApiForm } from "@/lib/use-api-form";
 import { ConfirmSubmit } from "./confirm-submit";
 
 export function NewsletterForm({
-  action,
+  endpoint,
   subscribers,
 }: {
-  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  endpoint: ApiEndpoint;
   subscribers: { id: string; email: string; name: string | null }[];
 }) {
-  const [state, formAction] = useActionState(action, idleState);
+  const [state, formAction] = useApiForm(endpoint);
   const errors = state.fieldErrors ?? {};
   const target = state.values?.target ?? "ALL";
   return (

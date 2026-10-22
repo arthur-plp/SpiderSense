@@ -9,12 +9,7 @@ import { EmptyState } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { ToastViewport, useToasts } from "@/components/ui/toasts";
 import { useLiveResource } from "@/components/ui/use-live-resource";
-import {
-  closeInterventionAction,
-  setPriorityAction,
-  takeIncidentAction,
-  updateHeroLocationAction,
-} from "@/lib/actions/incidents";
+import { apiRequest } from "@/lib/api-client";
 import { DEFAULT_CENTER, distanceInMeters, type LatLng } from "@/lib/geo";
 import { type IncidentPriority, PRIORITY_RANK } from "@/lib/labels";
 import type { HeroDto } from "@/lib/server/services/heroes";
@@ -202,18 +197,18 @@ export function OperationsCenter({ hero, initialIncidents, initialHeroes, villai
 
   const take = (incident: IncidentDto) => {
     select(incident.id, { fly: true });
-    run(() => takeIncidentAction(incident.id), `Intervention démarrée : ${incident.typeLabel} à ${incident.city}`);
+    run(() => apiRequest("POST", `/api/incidents/${incident.id}/intervention`), `Intervention démarrée : ${incident.typeLabel} à ${incident.city}`);
   };
 
   const prioritize = (incident: IncidentDto, priority: IncidentPriority) => {
     // Optimistic: the badge changes immediately, the poll confirms it.
     incidentsFeed.setData((all) => all.map((item) => (item.id === incident.id ? { ...item, priority } : item)));
-    run(() => setPriorityAction(incident.id, priority), "Priorité mise à jour");
+    run(() => apiRequest("PATCH", `/api/incidents/${incident.id}/priority`, { priority }), "Priorité mise à jour");
   };
 
   const finish = (incident: IncidentDto, report: InterventionReport) =>
     startTransition(async () => {
-      const result = await closeInterventionAction(incident.id, report);
+      const result = await apiRequest("POST", `/api/incidents/${incident.id}/intervention/close`, report);
       if (result.ok) {
         setFinishingId(null);
         // The server moved the hero to where the intervention ended.
@@ -240,7 +235,7 @@ export function OperationsCenter({ hero, initialIncidents, initialHeroes, villai
         setPosition(next);
         setFocus({ ...next, zoom: 14, key: `me-${Date.now()}` });
         startTransition(async () => {
-          const saved = await updateHeroLocationAction(next.lat, next.lng);
+          const saved = await apiRequest("PUT", "/api/me/location", next);
           push(saved.ok ? { tone: "success", title: "Position mise à jour" } : { tone: "error", title: "Position refusée", description: saved.error });
         });
       },

@@ -12,11 +12,6 @@ import { IncidentIcon } from "@/components/ui/incident-icon";
 import { PageHeader, Panel, SectionTitle } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Stars } from "@/components/ui/stars";
-import {
-  createVillainFromIncidentAction,
-  deleteIncidentAction,
-  updateIncidentAction,
-} from "@/lib/actions/admin/incidents";
 import { formatDateTime } from "@/lib/format";
 import { formatDistance } from "@/lib/geo";
 import { requireStaff } from "@/lib/server/auth";
@@ -133,7 +128,7 @@ export default async function AdminIncidentPage({ params }: PageProps<"/admin/in
                   <Skull className="size-4 text-slate-500" aria-hidden />
                   « {incident.reportedVillainName} » n&apos;est lié à aucune fiche de l&apos;encyclopédie.
                 </p>
-                <ActionButton action={createVillainFromIncidentAction.bind(null, incident.id)} showSuccess>
+                <ActionButton endpoint={{ method: "POST", path: `/api/incidents/${incident.id}/villain` }} showSuccess>
                   Créer le vilain depuis le nom signalé
                 </ActionButton>
               </div>
@@ -144,7 +139,7 @@ export default async function AdminIncidentPage({ params }: PageProps<"/admin/in
             <Panel className="p-5">
               <SectionTitle>Modifier le signalement</SectionTitle>
               <IncidentEditForm
-                action={updateIncidentAction.bind(null, incident.id)}
+                endpoint={{ method: "PUT", path: `/api/incidents/${incident.id}` }}
                 types={types.map((type) => ({ id: type.id, label: type.label }))}
                 villains={villains}
                 incident={{
@@ -174,7 +169,7 @@ export default async function AdminIncidentPage({ params }: PageProps<"/admin/in
                 Pour les doublons et les signalements abusifs. L&apos;incident reste visible dans l&apos;historique du déclarant.
               </p>
               <DeleteIncidentForm
-                action={deleteIncidentAction.bind(null, incident.id)}
+                endpoint={{ method: "DELETE", path: `/api/incidents/${incident.id}` }}
                 inProgress={incident.status === "IN_PROGRESS"}
                 defaultReason={duplicates.length > 0 ? "DUPLICATE" : "FALSE_REPORT"}
               />

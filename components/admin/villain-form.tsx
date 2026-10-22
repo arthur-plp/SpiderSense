@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Field, FormMessage, Input, Select, Textarea } from "@/components/ui/form";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { type ActionState, idleState } from "@/lib/action-state";
+import type { ApiEndpoint } from "@/lib/api-client";
 import { VILLAIN_STATUS_LABELS } from "@/lib/labels";
+import { useApiForm } from "@/lib/use-api-form";
 
 type VillainStatus = keyof typeof VILLAIN_STATUS_LABELS;
 
@@ -23,17 +24,17 @@ export type VillainFormDefaults = {
 const parisDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" });
 
 export function VillainForm({
-  action,
+  endpoint,
   types,
   villain,
   submitLabel,
 }: {
-  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  endpoint: ApiEndpoint;
   types: { id: number; label: string }[];
   villain?: VillainFormDefaults;
   submitLabel: string;
 }) {
-  const [state, formAction] = useActionState(action, idleState);
+  const [state, formAction] = useApiForm(endpoint);
   const errors = state.fieldErrors ?? {};
   const values = state.values;
   const text = (key: "alias" | "firstName" | "lastName" | "description" | "mainSector" | "imageUrl") =>

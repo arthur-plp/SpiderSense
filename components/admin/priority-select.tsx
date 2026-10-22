@@ -1,10 +1,11 @@
 "use client";
 
 import { ChevronDown, LoaderCircle } from "lucide-react";
-import { useActionState, useId, useRef } from "react";
+import { useId, useRef } from "react";
 import { cn } from "@/components/ui/cn";
-import { type ActionState, idleState } from "@/lib/action-state";
+import type { ApiEndpoint } from "@/lib/api-client";
 import { type IncidentPriority, PRIORITY_LABELS } from "@/lib/labels";
+import { useApiForm } from "@/lib/use-api-form";
 
 const TONES: Record<IncidentPriority | "NONE", string> = {
   HIGH: "border-rose-400/40 bg-rose-500/10 text-rose-200",
@@ -15,15 +16,15 @@ const TONES: Record<IncidentPriority | "NONE", string> = {
 
 /** Inline Haute / Normale / Basse picker, saved as soon as it changes. */
 export function PrioritySelect({
-  action,
+  endpoint,
   priority,
   label = "Priorité",
 }: {
-  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  endpoint: ApiEndpoint;
   priority: IncidentPriority | null;
   label?: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, idleState);
+  const [state, formAction, pending] = useApiForm(endpoint);
   const formRef = useRef<HTMLFormElement>(null);
   const id = useId();
   return (

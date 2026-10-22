@@ -4,7 +4,6 @@ import Link from "next/link";
 import { MarvelEncyclopediaLink } from "@/components/admin/marvel-link";
 import { VillainForm } from "@/components/admin/villain-form";
 import { PageHeader, Panel } from "@/components/ui/panel";
-import { saveVillainAction } from "@/lib/actions/admin/villains";
 import { requireStaff } from "@/lib/server/auth";
 import { listIncidentTypes } from "@/lib/server/services/incidents";
 
@@ -27,7 +26,7 @@ export default async function NewVillainPage() {
       />
       <Panel className="max-w-4xl p-5 sm:p-6">
         <VillainForm
-          action={saveVillainAction.bind(null, null)}
+          endpoint={{ method: "POST", path: "/api/admin/villains", redirectTo: "/admin/vilains/{id}" }}
           types={types.map((type) => ({ id: type.id, label: type.label }))}
           submitLabel="Créer la fiche"
         />

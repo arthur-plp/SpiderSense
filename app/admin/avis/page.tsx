@@ -10,7 +10,6 @@ import { Select } from "@/components/ui/form";
 import { EmptyState, PageHeader, Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { Stars } from "@/components/ui/stars";
-import { setReviewHiddenAction } from "@/lib/actions/admin/reviews";
 import { pluralize } from "@/lib/format";
 import { requireStaff } from "@/lib/server/auth";
 import { firstParam } from "@/lib/server/services/admin/params";
@@ -131,13 +130,13 @@ export default async function AdminReviewsPage({ searchParams }: PageProps<"/adm
                 )}
                 <div className="mt-auto flex justify-end pt-1">
                   {review.hidden ? (
-                    <ActionButton action={setReviewHiddenAction.bind(null, review.id, false)}>
+                    <ActionButton endpoint={{ method: "PATCH", path: `/api/admin/reviews/${review.id}`, body: { hidden: false } }}>
                       <Eye className="size-4" aria-hidden />
                       Rétablir
                     </ActionButton>
                   ) : (
                     <ActionButton
-                      action={setReviewHiddenAction.bind(null, review.id, true)}
+                      endpoint={{ method: "PATCH", path: `/api/admin/reviews/${review.id}`, body: { hidden: true } }}
                       variant="danger"
                       confirm={{
                         title: "Masquer cet avis ?",

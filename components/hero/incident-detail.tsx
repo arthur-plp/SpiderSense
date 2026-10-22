@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { IncidentIcon } from "@/components/ui/incident-icon";
 import { RelativeTime } from "@/components/ui/relative-time";
-import { getReporterContact } from "@/lib/actions/incidents";
+import { apiRequest } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import { formatDistance } from "@/lib/geo";
 import { type IncidentPriority, PRIORITY_LABELS } from "@/lib/labels";
@@ -59,8 +59,8 @@ export function IncidentDetail({
   useEffect(() => {
     if (!mine) return;
     let cancelled = false;
-    getReporterContact(incident.id).then((result) => {
-      if (!cancelled && result) setContact({ incidentId: incident.id, ...result });
+    apiRequest<{ contact: { firstName: string; phone: string } }>("GET", `/api/incidents/${incident.id}/reporter-contact`).then((result) => {
+      if (!cancelled && result.ok) setContact({ incidentId: incident.id, ...result.data.contact });
     });
     return () => {
       cancelled = true;

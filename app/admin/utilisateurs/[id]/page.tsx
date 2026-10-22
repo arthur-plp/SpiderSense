@@ -11,7 +11,6 @@ import { AccountBadges, RoleBadge } from "@/components/admin/user-badges";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Panel, SectionTitle } from "@/components/ui/panel";
-import { changeUserRoleAction, setUserDisabledAction, verifyUserAction } from "@/lib/actions/admin/users";
 import { formatDate, formatDateTime, pluralize } from "@/lib/format";
 import { CIVILITY_LABELS, REVIEW_STATUS_LABELS, REVIEW_STATUS_TONES } from "@/lib/labels";
 import { requireStaff } from "@/lib/server/auth";
@@ -69,19 +68,19 @@ export default async function AdminUserPage({ params }: PageProps<"/admin/utilis
         </div>
         <div className="flex flex-wrap items-start gap-2">
           {!account.verifiedAt && !account.disabledAt && !isStaffAccount && (
-            <ActionButton action={verifyUserAction.bind(null, account.id)} variant="primary" size="md">
+            <ActionButton endpoint={{ method: "POST", path: `/api/admin/users/${account.id}/verification` }} variant="primary" size="md">
               <UserCheck className="size-4" aria-hidden />
               Citoyen vérifié
             </ActionButton>
           )}
           {canToggle &&
             (account.disabledAt ? (
-              <ActionButton action={setUserDisabledAction.bind(null, account.id, false)} variant="secondary" size="md" showSuccess>
+              <ActionButton endpoint={{ method: "PATCH", path: `/api/admin/users/${account.id}/status`, body: { disabled: false } }} variant="secondary" size="md" showSuccess>
                 Réactiver le compte
               </ActionButton>
             ) : (
               <ActionButton
-                action={setUserDisabledAction.bind(null, account.id, true)}
+                endpoint={{ method: "PATCH", path: `/api/admin/users/${account.id}/status`, body: { disabled: true } }}
                 variant="danger"
                 size="md"
                 confirm={{
@@ -225,7 +224,7 @@ export default async function AdminUserPage({ params }: PageProps<"/admin/utilis
                 <p className="text-sm text-slate-400">Vous ne pouvez pas modifier votre propre rôle.</p>
               ) : (
                 <RoleForm
-                  action={changeUserRoleAction.bind(null, account.id)}
+                  endpoint={{ method: "PUT", path: `/api/admin/users/${account.id}/role` }}
                   role={account.role}
                   roles={assignableRoles(account.hero?.status ?? null)}
                   userName={name}

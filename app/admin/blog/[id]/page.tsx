@@ -7,7 +7,6 @@ import { ArticleForm } from "@/components/admin/article-form";
 import { DescriptionList } from "@/components/admin/description-list";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, Panel, SectionTitle } from "@/components/ui/panel";
-import { deleteArticleAction, saveArticleAction } from "@/lib/actions/admin/articles";
 import { formatDateTime } from "@/lib/format";
 import { requireStaff } from "@/lib/server/auth";
 import { getAdminArticle } from "@/lib/server/services/admin/articles";
@@ -54,7 +53,7 @@ export default async function AdminArticlePage({ params }: PageProps<"/admin/blo
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)]">
         <Panel className="p-5 sm:p-6">
           <ArticleForm
-            action={saveArticleAction.bind(null, article.id)}
+            endpoint={{ method: "PUT", path: `/api/admin/articles/${article.id}` }}
             article={{
               title: article.title,
               slug: article.slug,
@@ -90,7 +89,7 @@ export default async function AdminArticlePage({ params }: PageProps<"/admin/blo
               {published ? "L'article disparaît immédiatement du site." : "Le brouillon est définitivement supprimé."}
             </p>
             <ActionButton
-              action={deleteArticleAction.bind(null, article.id)}
+              endpoint={{ method: "DELETE", path: `/api/admin/articles/${article.id}`, redirectTo: "/admin/blog" }}
               variant="danger"
               confirm={{
                 title: "Supprimer cet article ?",

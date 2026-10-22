@@ -1,15 +1,16 @@
 "use client";
 
-import { type ReactNode, useActionState } from "react";
+import type { ReactNode } from "react";
 import type { ButtonSize, ButtonVariant } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { type ActionState, idleState } from "@/lib/action-state";
+import type { ApiEndpoint } from "@/lib/api-client";
+import { useApiForm } from "@/lib/use-api-form";
 import { ConfirmSubmit } from "./confirm-submit";
 
 type ActionButtonProps = {
-  /** A Server Action with its ids already bound (`action.bind(null, id)`). */
-  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  /** The REST call made on click, ids included in the path. */
+  endpoint: ApiEndpoint;
   children: ReactNode;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -23,7 +24,7 @@ type ActionButtonProps = {
 
 /** One-click moderation action (approve, hide, disable…) with inline feedback. */
 export function ActionButton({
-  action,
+  endpoint,
   children,
   variant = "secondary",
   size = "sm",
@@ -32,7 +33,7 @@ export function ActionButton({
   confirm,
   showSuccess = false,
 }: ActionButtonProps) {
-  const [state, formAction] = useActionState(action, idleState);
+  const [state, formAction] = useApiForm(endpoint);
   const showMessage = state.message && (state.status === "error" || showSuccess);
   return (
     <form action={formAction} className="inline-flex flex-col items-start gap-1">

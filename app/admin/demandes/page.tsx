@@ -7,7 +7,6 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, PageHeader, Panel } from "@/components/ui/panel";
 import { RelativeTime } from "@/components/ui/relative-time";
-import { decideEmailChangeAction, decideHeroApplicationAction, decideMovieAction } from "@/lib/actions/admin/requests";
 import { formatNumber } from "@/lib/format";
 import { requireStaff } from "@/lib/server/auth";
 import { listPendingEmailChanges, listPendingHeroApplications, listPendingMovies } from "@/lib/server/services/admin/requests";
@@ -126,11 +125,11 @@ export default async function AdminRequestsPage() {
                     )}
                     {application.bio && <p className="text-sm text-slate-300">{application.bio}</p>}
                     <div className="mt-auto flex flex-wrap items-start gap-2 border-t border-white/5 pt-4">
-                      <ActionButton action={decideHeroApplicationAction.bind(null, application.userId, true)} variant="primary" size="md">
+                      <ActionButton endpoint={{ method: "POST", path: `/api/admin/hero-applications/${application.userId}/decision`, body: { approved: true } }} variant="primary" size="md">
                         Valider le statut
                       </ActionButton>
                       <ActionButton
-                        action={decideHeroApplicationAction.bind(null, application.userId, false)}
+                        endpoint={{ method: "POST", path: `/api/admin/hero-applications/${application.userId}/decision`, body: { approved: false } }}
                         variant="secondary"
                         size="md"
                         confirm={{
@@ -186,11 +185,11 @@ export default async function AdminRequestsPage() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-start gap-2">
-                      <ActionButton action={decideEmailChangeAction.bind(null, request.id, true)} variant="primary">
+                      <ActionButton endpoint={{ method: "POST", path: `/api/admin/email-changes/${request.id}/decision`, body: { approved: true } }} variant="primary">
                         Valider
                       </ActionButton>
                       <ActionButton
-                        action={decideEmailChangeAction.bind(null, request.id, false)}
+                        endpoint={{ method: "POST", path: `/api/admin/email-changes/${request.id}/decision`, body: { approved: false } }}
                         confirm={{
                           title: "Refuser ce changement d'email ?",
                           description: `${name} conserve l'adresse ${request.currentEmail}.`,
@@ -252,10 +251,10 @@ export default async function AdminRequestsPage() {
                       <span className="sr-only">(nouvel onglet)</span>
                     </a>
                     <div className="mt-auto flex flex-wrap items-start gap-2 pt-2">
-                      <ActionButton action={decideMovieAction.bind(null, movie.heroId, movie.movieId, true)} variant="primary">
+                      <ActionButton endpoint={{ method: "POST", path: `/api/admin/hero-movies/${movie.heroId}/${movie.movieId}/decision`, body: { approved: true } }} variant="primary">
                         Valider
                       </ActionButton>
-                      <ActionButton action={decideMovieAction.bind(null, movie.heroId, movie.movieId, false)}>Refuser</ActionButton>
+                      <ActionButton endpoint={{ method: "POST", path: `/api/admin/hero-movies/${movie.heroId}/${movie.movieId}/decision`, body: { approved: false } }}>Refuser</ActionButton>
                     </div>
                   </div>
                 </Panel>

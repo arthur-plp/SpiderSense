@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gt, inArray, isNull, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import {
   heroProfiles,
   incidentTypes,
@@ -8,6 +8,7 @@ import {
   villains,
 } from "@/db/schema";
 import type { Database } from "@/db";
+import { distanceInMeters, DUPLICATE_RADIUS_METERS } from "@/lib/geo";
 import type { IncidentPriority, IncidentStatus } from "@/lib/labels";
 import { logActivity } from "../activity";
 import { db, isUniqueViolation } from "../db";
@@ -180,6 +181,45 @@ export async function getIncidentReporter(incidentId: string) {
     .innerJoin(users, eq(incidents.reporterId, users.id))
     .where(eq(incidents.id, incidentId));
   return row ?? null;
+}
+
+/** Active incidents around a position, nearest first, to warn about duplicates before reporting. */
+export async function findNearbyActiveIncidents(lat: number, lng: number): Promise<(IncidentDto & { distance: number })[]> {
+  const active = await listActiveIncidents();
+  return active
+    .filter((incident) => incident.latitude !== null && incident.longitude !== null)
+    .map((incident) => ({
+      ...incident,
+      reporterId: null,
+      distance: distanceInMeters({ lat, lng }, { lat: incident.latitude!, lng: incident.longitude! }),
+    }))
+    .filter((incident) => incident.distance <= DUPLICATE_RADIUS_METERS)
+    .sort((a, b) => a.distance - b.distance);
+}
+
+/** Reporter's first name and phone, only for the hero currently in charge of the incident. */
+export async function getReporterContactForHero(
+  incidentId: string,
+  heroId: string,
+): Promise<{ firstName: string; phone: string } | null> {
+  const database = await db();
+  const [row] = await database
+    .select({ firstName: users.firstName, phone: users.phone })
+    .from(incidents)
+    .innerJoin(users, eq(incidents.reporterId, users.id))
+    .where(and(eq(incidents.id, incidentId), eq(incidents.heroId, heroId), eq(incidents.status, "IN_PROGRESS")));
+  return row ?? null;
+}
+
+/** Approved heroes currently on duty: the ones alerted by a new incident. */
+export async function countHeroesOnDuty(): Promise<number> {
+  const database = await db();
+  const [{ count }] = await database
+    .select({ count: sql<number>`count(*)::int` })
+    .from(heroProfiles)
+    .innerJoin(users, eq(users.id, heroProfiles.userId))
+    .where(and(eq(heroProfiles.status, "APPROVED"), eq(heroProfiles.onDuty, true), isNull(users.disabledAt)));
+  return count;
 }
 
 export async function listIncidentTypes() {

@@ -8,7 +8,6 @@ import { VillainForm } from "@/components/admin/villain-form";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { PageHeader, Panel, SectionTitle } from "@/components/ui/panel";
-import { deleteVillainAction, saveVillainAction } from "@/lib/actions/admin/villains";
 import { formatDate, pluralize } from "@/lib/format";
 import { VILLAIN_STATUS_LABELS } from "@/lib/labels";
 import { requireStaff } from "@/lib/server/auth";
@@ -48,7 +47,7 @@ export default async function AdminVillainPage({ params }: PageProps<"/admin/vil
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Panel className="p-5 sm:p-6">
           <VillainForm
-            action={saveVillainAction.bind(null, villain.id)}
+            endpoint={{ method: "PUT", path: `/api/admin/villains/${villain.id}` }}
             types={types.map((type) => ({ id: type.id, label: type.label }))}
             villain={{ ...villain, specialtyIds: villain.specialties.map((specialty) => specialty.id) }}
             submitLabel="Enregistrer la fiche"
@@ -79,7 +78,7 @@ export default async function AdminVillainPage({ params }: PageProps<"/admin/vil
               La fiche disparaît de l&apos;encyclopédie. Les incidents liés sont conservés, sans vilain identifié.
             </p>
             <ActionButton
-              action={deleteVillainAction.bind(null, villain.id)}
+              endpoint={{ method: "DELETE", path: `/api/admin/villains/${villain.id}`, redirectTo: "/admin/vilains" }}
               variant="danger"
               confirm={{
                 title: `Supprimer ${villain.alias} ?`,

@@ -1,18 +1,18 @@
 "use client";
 
 import { Lock } from "lucide-react";
-import { useActionState } from "react";
 import { LocationPicker } from "@/components/map/location-picker";
 import { Field, FormMessage, Input, Select, Textarea } from "@/components/ui/form";
 import { Panel, SectionTitle } from "@/components/ui/panel";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { type ActionState, idleState } from "@/lib/action-state";
+import type { ActionState } from "@/lib/action-state";
+import type { ApiEndpoint } from "@/lib/api-client";
 import { type IncidentPriority, PRIORITY_LABELS, VILLAIN_STATUS_LABELS } from "@/lib/labels";
+import { useApiForm } from "@/lib/use-api-form";
 import { TimezoneOffsetInput } from "./timezone-offset-input";
 
 type IncidentType = { id: number; label: string };
 type VillainOption = { id: string; alias: string; status: "AT_LARGE" | "IMPRISONED" };
-type FormAction = (state: ActionState, formData: FormData) => Promise<ActionState>;
 
 type Defaults = {
   typeId: string;
@@ -92,8 +92,8 @@ function DescriptionFields({ types, state, defaults }: { types: IncidentType[]; 
 }
 
 /** "Signaler un incident" from the dashboard (moderator as reporter). */
-export function IncidentCreateForm({ action, types }: { action: FormAction; types: IncidentType[] }) {
-  const [state, formAction] = useActionState(action, idleState);
+export function IncidentCreateForm({ endpoint, types }: { endpoint: ApiEndpoint; types: IncidentType[] }) {
+  const [state, formAction] = useApiForm(endpoint);
   const errors = state.fieldErrors ?? {};
   return (
     <form action={formAction} className="grid grid-cols-1 gap-6 lg:grid-cols-2" noValidate>
@@ -148,17 +148,17 @@ type EditableIncident = {
 
 /** Moderator correction of a report: descriptive fields only, never status or hero. */
 export function IncidentEditForm({
-  action,
+  endpoint,
   incident,
   types,
   villains,
 }: {
-  action: FormAction;
+  endpoint: ApiEndpoint;
   incident: EditableIncident;
   types: IncidentType[];
   villains: VillainOption[];
 }) {
-  const [state, formAction] = useActionState(action, idleState);
+  const [state, formAction] = useApiForm(endpoint);
   const errors = state.fieldErrors ?? {};
   const position = incident.latitude !== null && incident.longitude !== null ? { lat: incident.latitude, lng: incident.longitude } : null;
   return (

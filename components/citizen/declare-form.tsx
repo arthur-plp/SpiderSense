@@ -1,20 +1,19 @@
 "use client";
 
-import { useActionState, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { LocationPicker } from "@/components/map/location-picker";
 import { cn } from "@/components/ui/cn";
 import { Field, FormMessage, Input, Textarea } from "@/components/ui/form";
 import { IncidentIcon } from "@/components/ui/incident-icon";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { idleState } from "@/lib/action-state";
-import { declareIncident } from "@/lib/actions/incidents";
+import { useApiForm } from "@/lib/use-api-form";
 import type { IncidentTypeOption } from "./sos-dialog";
 
 const noop = () => () => {};
 
 /** Detailed declaration form (6.1.2): type, when, who, what, where. */
 export function DeclareForm({ types }: { types: IncidentTypeOption[] }) {
-  const [state, action] = useActionState(declareIncident, idleState);
+  const [state, action] = useApiForm({ method: "POST", path: "/api/incidents", redirectTo: "/citoyen/incidents/{id}?nouveau=1" });
   const [now, setNow] = useState(true);
   const errors = state.fieldErrors ?? {};
   const values = state.values ?? {};
