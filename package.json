@@ -17,6 +17,8 @@
     "bench": "tsx scripts/bench.ts",
     "explain": "tsx scripts/explain.ts",
     "events:rebuild": "tsx scripts/events-rebuild.ts",
+    "elk:setup": "tsx scripts/elk-setup.ts",
+    "demo:traffic": "tsx scripts/demo-traffic.ts",
     "services:up": "docker compose up -d db mailpit",
     "services:down": "docker compose stop db mailpit",
     "docs": "npm --prefix docusaurus start -- --port 3001"
